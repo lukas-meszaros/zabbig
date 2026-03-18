@@ -1,0 +1,122 @@
+# =============================================================================
+# docker-compose.yml — Zabbix local lab stack
+#
+# Services:
+#   postgres       – PostgreSQL 16 database for Zabbix
+#   zabbix-server  – Zabbix server process
+#   zabbix-web     – Zabbix web frontend (nginx + PHP-FPM)
+#
+# Usage:
+#   cp .env.example .env
+#   docker compose up -d
+# =============================================================================
+
+services:
+
+  # ---------------------------------------------------------------------------
+  # PostgreSQL database
+  # ---------------------------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    container_name: zabbix-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-zabbix}
+      POSTGRES_USER: ${POSTGRES_USER:-zabbix}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-zabbix_lab_password}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - zabbix-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-zabbix} -d ${POSTGRES_DB:-zabbix}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  # ---------------------------------------------------------------------------
+  # Zabbix server
+  # ---------------------------------------------------------------------------
+  zabbix-server:
+    image: zabbix/zabbix-server-pgsql:alpine-7.0-latest
+    container_name: zabbix-server
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB_SERVER_HOST: ${ZBX_DB_HOST:-postgres}
+      DB_SERVER_PORT: ${ZBX_DB_PORT:-5432}
+      POSTGRES_DB: ${ZBX_DB_NAME:-zabbix}
+      POSTGRES_USER: ${ZBX_DB_USER:-zabbix}
+      POSTGRES_PASSWORD: ${ZBX_DB_PASSWORD:-zabbix_lab_password}
+      # Allow any host to push trapper data (lab only — restrict in production)
+      ZBX_STARTPOLLERS: 5
+      ZBX_STARTTRAPPERS: 5
+      ZBX_ALLOWEDIPRANGE: ${ZBX_ALLOWED_HOSTS:-0.0.0.0/0}
+    ports:
+      # Trapper port — reachable from macOS host for zabbix_sender / Python client
+      - "${ZABBIX_TRAPPER_PORT:-10051}:10051"
+    networks:
+      - zabbix-net
+    volumes:
+      - zabbix-server-alertscripts:/usr/lib/zabbix/alertscripts
+      - zabbix-server-externalscripts:/usr/lib/zabbix/externalscripts
+    healthcheck:
+      test: ["CMD-SHELL", "zabbix_server --version >/dev/null 2>&1 && pgrep zabbix_server >/dev/null"]
+      interval: 15s
+      timeout: 10s
+      retries: 12
+      start_period: 60s
+
+  # ---------------------------------------------------------------------------
+  # Zabbix web frontend (nginx + PHP-FPM)
+  # ---------------------------------------------------------------------------
+  zabbix-web:
+    image: zabbix/zabbix-web-nginx-pgsql:alpine-7.0-latest
+    container_name: zabbix-web
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      zabbix-server:
+        condition: service_healthy
+    environment:
+      ZBX_SERVER_HOST: ${ZBX_SERVER_HOST:-zabbix-server}
+      ZBX_SERVER_PORT: 10051
+      DB_SERVER_HOST: ${ZBX_DB_HOST:-postgres}
+      DB_SERVER_PORT: ${ZBX_DB_PORT:-5432}
+      POSTGRES_DB: ${ZBX_DB_NAME:-zabbix}
+      POSTGRES_USER: ${ZBX_DB_USER:-zabbix}
+      POSTGRES_PASSWORD: ${ZBX_DB_PASSWORD:-zabbix_lab_password}
+      PHP_TZ: ${PHP_TZ:-Europe/Berlin}
+    ports:
+      - "${ZABBIX_WEB_PORT:-8080}:8080"
+    networks:
+      - zabbix-net
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8080/index.php | grep -q 'Zabbix' || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 12
+      start_period: 60s
+
+# =============================================================================
+# Networks
+# =============================================================================
+networks:
+  zabbix-net:
+    name: zabbix-lab-net
+    driver: bridge
+
+# =============================================================================
+# Volumes  (persistent across container restarts)
+# =============================================================================
+volumes:
+  postgres-data:
+    name: zabbix-lab-postgres-data
+  zabbix-server-alertscripts:
+    name: zabbix-lab-alertscripts
+  zabbix-server-externalscripts:
+    name: zabbix-lab-externalscripts

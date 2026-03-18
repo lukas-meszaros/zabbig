@@ -1,0 +1,107 @@
+# =============================================================================
+# .gitignore — Python + Docker + macOS
+# =============================================================================
+
+# ---- Environment / secrets --------------------------------------------------
+.env
+*.env
+!.env.example
+
+# ---- Python -----------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+*.manifest
+*.spec
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# pytest
+.pytest_cache/
+.cache/
+htmlcov/
+.tox/
+.coverage
+.coverage.*
+coverage.xml
+*.cover
+*.py,cover
+nosetests.xml
+test-results/
+
+# mypy / type checking
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Ruff / linting cache
+.ruff_cache/
+
+# ---- Docker -----------------------------------------------------------------
+# Ignore locally overridden compose overrides
+docker-compose.override.yml
+docker-compose.local.yml
+
+# ---- macOS ------------------------------------------------------------------
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+
+# ---- IDE / editors ----------------------------------------------------------
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.classpath
+
+# ---- Logs -------------------------------------------------------------------
+*.log
+logs/
+
+# ---- Temporary files --------------------------------------------------------
+tmp/
+temp/
+*.tmp
+*.bak
+*.orig
