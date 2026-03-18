@@ -24,17 +24,16 @@ echo "Sending all starter items to ${ZABBIX_SERVER}:${ZABBIX_PORT} ..."
 echo "  host: ${HOST_NAME}"
 echo ""
 
-# zabbix_sender supports an input file with one "host key value" per line.
+# zabbix_sender input file format: <hostname> <key> <value> (all three fields required).
 # Using a here-document avoids creating temp files.
 zabbix_sender \
   --zabbix-server "${ZABBIX_SERVER}" \
   --port          "${ZABBIX_PORT}" \
-  --with-timestamps \
   --input-file    - <<EOF
-${HOST_NAME} macos.heartbeat     1          ${TIMESTAMP}
-${HOST_NAME} macos.status        0          ${TIMESTAMP}
-${HOST_NAME} macos.error_count   0          ${TIMESTAMP}
-${HOST_NAME} macos.message       "All OK"   ${TIMESTAMP}
+${HOST_NAME} macos.heartbeat    1
+${HOST_NAME} macos.status       0
+${HOST_NAME} macos.error_count  0
+${HOST_NAME} macos.message      "All OK"
 EOF
 
 echo ""

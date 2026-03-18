@@ -20,7 +20,7 @@ import sys
 import time
 
 # Allow running from repo root without installing the package
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../client/src"))
+#sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../client/src"))
 
 from zabbix_sender import ZabbixSender, SenderItem
 

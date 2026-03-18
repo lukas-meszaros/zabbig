@@ -41,11 +41,11 @@ fi
 zabbix_sender \
   --zabbix-server "${ZABBIX_SERVER}" \
   --port          "${ZABBIX_PORT}" \
-  --with-timestamps \
   --input-file    - <<EOF
-${HOST_NAME} macos.heartbeat     1              ${TIMESTAMP}
-${HOST_NAME} macos.status        ${STATUS}      ${TIMESTAMP}
-${HOST_NAME} macos.error_count   ${ERROR_COUNT} ${TIMESTAMP}
+${HOST_NAME} macos.heartbeat     1
+${HOST_NAME} macos.status        ${STATUS}
+${HOST_NAME} macos.error_count   ${ERROR_COUNT}
+${HOST_NAME} macos.message       "Error Connection"
 EOF
 
 echo ""
