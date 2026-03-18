@@ -61,7 +61,6 @@ if response.failed:
     print(
         "\nWARNING: Zabbix rejected some items. "
         "Ensure the host and trapper items exist.\n"
-        "Run: python3 scripts/bootstrap.py"
     )
     sys.exit(1)
 
