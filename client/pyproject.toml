@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "zabbix-sender"
+version = "0.1.0"
+description = "Minimal Python client for sending values to Zabbix trapper items"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+dependencies = []   # stdlib only — no external runtime deps
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4,<9",
+    "pytest-cov>=4.1,<6",
+    "ruff>=0.4,<1",
+]
+
+[project.scripts]
+zabbix-sender = "zabbix_sender.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+# ---------------------------------------------------------------------------
+# Ruff (linter + formatter)
+# ---------------------------------------------------------------------------
+[tool.ruff]
+line-length = 88
+target-version = "py39"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP"]
+
+# ---------------------------------------------------------------------------
+# pytest
+# ---------------------------------------------------------------------------
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v"
