@@ -62,7 +62,9 @@ print(f"  library: zabbix-utils (vendored, no install needed)")
 print(f"  host:    {HOST_NAME}")
 print()
 
-sender   = Sender(server=ZABBIX_SERVER, port=ZABBIX_PORT)
+# chunk_size=1 puts each item in its own chunk, so resp.chunk maps back to
+# the original items list by index (chunk numbers are 1-based).
+sender   = Sender(server=ZABBIX_SERVER, port=ZABBIX_PORT, chunk_size=1)
 response = sender.send(items)
 
 print(
@@ -72,11 +74,19 @@ print(
 )
 
 if response.failed:
-    print(
-        "\nWARNING: Zabbix rejected some items. "
-        "Ensure the host and trapper items exist.\n"
-        "Run: python3 scripts/bootstrap.py"
-    )
+    print(f"\nWARNING: {response.failed} item(s) rejected by Zabbix:\n")
+    if response.details:
+        for node, chunks in response.details.items():
+            for resp in chunks:
+                item = items[resp.chunk - 1]   # chunk is 1-based
+                status = "OK    " if resp.failed == 0 else "FAILED"
+                print(
+                    f"  [{status}]  host={item.host!r}  "
+                    f"key={item.key!r}  value={item.value!r}"
+                    + (f"  (node={node})" if len(response.details) > 1 else "")
+                )
+    print("\nEnsure each host and trapper item exists in Zabbix.")
+    print("Run: python3 scripts/bootstrap.py")
     sys.exit(1)
 
 print("\nDone.  Open Zabbix web UI → Monitoring → Latest data to verify.")

@@ -35,7 +35,7 @@ HOST_NAME     = "macos-local-sender"
 
 items = [
     ItemValue(HOST_NAME, "macos.heartbeat",   "5"),
-    ItemValue(HOST_NAME, "macos.status",      "5"),
+    ItemValue(HOST_NAME, "macos.status2",      "5"),
     ItemValue(HOST_NAME, "macos.error_count", "5"),
     ItemValue(HOST_NAME, "macos.message",     "All OK - message"),
 ]
@@ -44,7 +44,6 @@ items = [
 # Send
 # ---------------------------------------------------------------------------
 print(f"Sending {len(items)} items to {ZABBIX_SERVER}:{ZABBIX_PORT} ...")
-print(f"  library: zabbix-utils (vendored, no install needed)")
 print(f"  host:    {HOST_NAME}")
 print()
 
