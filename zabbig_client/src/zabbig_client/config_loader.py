@@ -315,6 +315,28 @@ def _validate_collector_params(metric_id: str, collector: str, params: dict, str
             _config_error(
                 f"Metric '{metric_id}': service collector with check_mode=process requires params.process_pattern", strict
             )
+    elif collector == "network":
+        mode = params.get("mode")
+        valid_modes = {
+            "rx_bytes_per_sec", "tx_bytes_per_sec",
+            "rx_bytes", "tx_bytes", "rx_packets", "tx_packets",
+            "rx_errors", "tx_errors", "rx_dropped", "tx_dropped",
+            "tcp_inuse", "tcp_timewait", "tcp_orphans", "udp_inuse",
+        }
+        if not mode:
+            _config_error(
+                f"Metric '{metric_id}': network collector requires params.mode", strict
+            )
+        elif mode not in valid_modes:
+            _config_error(
+                f"Metric '{metric_id}': network collector params.mode='{mode}' not in {valid_modes}", strict
+            )
+        # interface is required for all non-sockstat modes
+        sockstat_modes = {"tcp_inuse", "tcp_timewait", "tcp_orphans", "udp_inuse"}
+        if mode not in sockstat_modes and "interface" not in params:
+            _config_error(
+                f"Metric '{metric_id}': network collector mode='{mode}' requires params.interface", strict
+            )
 
 
 def _validate_client_config(cfg: ClientConfig) -> None:

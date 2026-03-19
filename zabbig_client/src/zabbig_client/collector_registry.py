@@ -38,7 +38,7 @@ def registered_names() -> list[str]:
 
 def _ensure_collectors_imported() -> None:
     """Import all collector modules so their @register_collector decorators run."""
-    from .collectors import cpu, memory, disk, service  # noqa: F401
+    from .collectors import cpu, memory, disk, service, network  # noqa: F401
 
 
 # Called once at startup

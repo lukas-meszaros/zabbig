@@ -197,6 +197,46 @@
 #                            Overrides runtime.proc_root for this metric.
 #                            Default: runtime.proc_root (which defaults to "/proc").
 #
+# -----------------------------------------------------------------------------
+# PARAMS — network collector
+# -----------------------------------------------------------------------------
+# Reads from {proc_root}/net/dev and {proc_root}/net/sockstat (Linux only).
+# macOS and other systems without a proc filesystem will fail; error_policy
+# applies (default: skip).
+#
+#   interface  string   REQUIRED for all traffic/error/counter modes.
+#                       The NIC name as shown in /proc/net/dev.
+#                       Example: eth0  ens3  enp1s0
+#                       Use "total" to aggregate all non-loopback interfaces.
+#                       NOT required for socket modes (tcp_inuse, tcp_timewait,
+#                       tcp_orphans, udp_inuse).
+#
+#   mode       string   REQUIRED
+#
+#              Rate modes — read /proc/net/dev twice with a 1 s sleep:
+#                rx_bytes_per_sec  — Inbound throughput in bytes/second.
+#                tx_bytes_per_sec  — Outbound throughput in bytes/second.
+#                Set timeout_seconds >= 3 for rate modes.
+#
+#              Cumulative counter modes — single /proc/net/dev read:
+#                rx_bytes          — Total bytes received since boot.
+#                tx_bytes          — Total bytes transmitted since boot.
+#                rx_packets        — Total packets received since boot.
+#                tx_packets        — Total packets transmitted since boot.
+#                rx_errors         — Total receive errors since boot.
+#                tx_errors         — Total transmit errors since boot.
+#                rx_dropped        — Total receive drops since boot.
+#                tx_dropped        — Total transmit drops since boot.
+#
+#              Socket counters — from /proc/net/sockstat, no interface param:
+#                tcp_inuse         — Currently open TCP sockets.
+#                tcp_timewait      — Sockets in TIME_WAIT state.
+#                tcp_orphans       — Orphaned TCP sockets (no fd attached).
+#                udp_inuse         — Currently open UDP sockets.
+#
+#   proc_root  string  Optional. Overrides runtime.proc_root for this metric.
+#                      Default: runtime.proc_root (which defaults to "/proc").
+#
 # =============================================================================
 
 version: 1
@@ -228,6 +268,9 @@ collector_defaults:
   service:
     timeout_seconds: 8
     delivery: immediate     # service state changes are sent immediately
+  network:
+    timeout_seconds: 10
+    delivery: batch
 
 # ---------------------------------------------------------------------------
 # Metrics
@@ -569,3 +612,227 @@ metrics:
     params:
       check_mode: process
       process_pattern: "cron"   # matches 'cron', 'crond', etc.
+
+  # ---- Network -----------------------------------------------------------
+
+  - id: net_rx_bytes_per_sec
+    name: Network receive bytes/sec
+    description: >
+      Inbound throughput in bytes per second across all non-loopback
+      interfaces. Computed from two /proc/net/dev reads 1 second apart.
+    enabled: false
+    collector: network
+    key: host.net.rx_bytes_per_sec
+    value_type: float
+    unit: "B/s"
+    delivery: batch
+    importance: normal
+    timeout_seconds: 5
+    error_policy: skip
+    tags: [system, network]
+    params:
+      interface: total
+      mode: rx_bytes_per_sec
+
+  - id: net_tx_bytes_per_sec
+    name: Network transmit bytes/sec
+    description: >
+      Outbound throughput in bytes per second across all non-loopback
+      interfaces. Computed from two /proc/net/dev reads 1 second apart.
+    enabled: false
+    collector: network
+    key: host.net.tx_bytes_per_sec
+    value_type: float
+    unit: "B/s"
+    delivery: batch
+    importance: normal
+    timeout_seconds: 5
+    error_policy: skip
+    tags: [system, network]
+    params:
+      interface: total
+      mode: tx_bytes_per_sec
+
+  - id: net_rx_errors
+    name: Network receive errors
+    description: >
+      Cumulative receive hardware/driver errors since boot across all
+      non-loopback interfaces. A rising value indicates NIC or cable
+      problems.
+    enabled: true
+    collector: network
+    key: host.net.rx_errors
+    value_type: int
+    unit: ""
+    delivery: batch
+    importance: high
+    timeout_seconds: 10
+    error_policy: skip
+    tags: [system, network]
+    params:
+      interface: total
+      mode: rx_errors
+
+  - id: net_tx_errors
+    name: Network transmit errors
+    description: >
+      Cumulative transmit errors since boot across all non-loopback
+      interfaces.
+    enabled: true
+    collector: network
+    key: host.net.tx_errors
+    value_type: int
+    unit: ""
+    delivery: batch
+    importance: high
+    timeout_seconds: 10
+    error_policy: skip
+    tags: [system, network]
+    params:
+      interface: total
+      mode: tx_errors
+
+  - id: net_rx_dropped
+    name: Network receive drops
+    description: >
+      Cumulative receive packet drops since boot (kernel buffer overruns)
+      across all non-loopback interfaces.
+    enabled: true
+    collector: network
+    key: host.net.rx_dropped
+    value_type: int
+    unit: ""
+    delivery: batch
+    importance: high
+    timeout_seconds: 10
+    error_policy: skip
+    tags: [system, network]
+    params:
+      interface: total
+      mode: rx_dropped
+
+  - id: net_tx_dropped
+    name: Network transmit drops
+    description: >
+      Cumulative transmit packet drops since boot across all non-loopback
+      interfaces.
+    enabled: true
+    collector: network
+    key: host.net.tx_dropped
+    value_type: int
+    unit: ""
+    delivery: batch
+    importance: high
+    timeout_seconds: 10
+    error_policy: skip
+    tags: [system, network]
+    params:
+      interface: total
+      mode: tx_dropped
+
+  - id: net_tcp_inuse
+    name: TCP sockets in use
+    description: Number of currently open TCP sockets.
+    enabled: true
+    collector: network
+    key: host.net.tcp_inuse
+    value_type: int
+    unit: ""
+    delivery: batch
+    importance: normal
+    timeout_seconds: 10
+    error_policy: skip
+    tags: [system, network]
+    params:
+      mode: tcp_inuse
+
+  - id: net_tcp_timewait
+    name: TCP sockets TIME_WAIT
+    description: >
+      Number of TCP sockets in TIME_WAIT state. A persistently high value
+      can indicate connection churn or port exhaustion.
+    enabled: true
+    collector: network
+    key: host.net.tcp_timewait
+    value_type: int
+    unit: ""
+    delivery: batch
+    importance: normal
+    timeout_seconds: 10
+    error_policy: skip
+    tags: [system, network]
+    params:
+      mode: tcp_timewait
+
+  - id: net_tcp_orphans
+    name: TCP orphaned sockets
+    description: >
+      Number of orphaned TCP sockets (not attached to any file descriptor).
+      A high and growing count can indicate a socket leak.
+    enabled: false
+    collector: network
+    key: host.net.tcp_orphans
+    value_type: int
+    unit: ""
+    delivery: batch
+    importance: low
+    timeout_seconds: 10
+    error_policy: skip
+    tags: [system, network]
+    params:
+      mode: tcp_orphans
+
+  - id: net_udp_inuse
+    name: UDP sockets in use
+    description: Number of currently open UDP sockets.
+    enabled: false
+    collector: network
+    key: host.net.udp_inuse
+    value_type: int
+    unit: ""
+    delivery: batch
+    importance: low
+    timeout_seconds: 10
+    error_policy: skip
+    tags: [system, network]
+    params:
+      mode: udp_inuse
+
+  # Per-interface examples — disabled by default; set interface to match your NIC.
+
+  - id: net_eth0_rx_bytes_per_sec
+    name: eth0 receive bytes/sec
+    description: >
+      Per-interface receive throughput for eth0. Enable and adjust
+      params.interface to match the NIC name on your host (e.g. ens3, enp1s0).
+    enabled: false
+    collector: network
+    key: host.net.eth0.rx_bytes_per_sec
+    value_type: float
+    unit: "B/s"
+    delivery: batch
+    importance: normal
+    timeout_seconds: 5
+    error_policy: skip
+    tags: [system, network]
+    params:
+      interface: eth0
+      mode: rx_bytes_per_sec
+
+  - id: net_eth0_tx_bytes_per_sec
+    name: eth0 transmit bytes/sec
+    description: >
+      Per-interface transmit throughput for eth0.
+    enabled: false
+    collector: network
+    key: host.net.eth0.tx_bytes_per_sec
+    value_type: float
+    unit: "B/s"
+    delivery: batch
+    importance: normal
+    timeout_seconds: 5
+    error_policy: skip
+    tags: [system, network]
+    params:
+      interface: eth0
+      mode: tx_bytes_per_sec
