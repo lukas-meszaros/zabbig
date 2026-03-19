@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-bootstrap.py — Provision a Zabbix host and all required trapper items for the
+provision_zabbix.py — Provision a Zabbix host and all required trapper items for the
                zabbig monitoring client.
 
 Reads Zabbix server connection details, host_name, and host_group from
@@ -17,7 +17,7 @@ What this creates
 Usage
 -----
   cd zabbig_client
-  python3 bootstrap.py [--config client.yaml] [--metrics metrics.yaml]
+  python3 provision_zabbix.py [--config client.yaml] [--metrics metrics.yaml]
                        [--api-url URL] [--user USER] [--password PASS]
                        [--no-wait]
 
