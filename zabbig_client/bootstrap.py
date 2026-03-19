@@ -1,67 +1,75 @@
 #!/usr/bin/env python3
 """
-zabbig_client/scripts/bootstrap_zabbix.py
-──────────────────────────────────────────
-Provision a Zabbix host and all required trapper items for the zabbig client.
+bootstrap.py — Provision a Zabbix host and all required trapper items for the
+               zabbig monitoring client.
 
-Reads client.yaml (for host_name) and metrics.yaml (for item keys) then uses
-the Zabbix JSON-RPC API to create everything.  Idempotent — safe to re-run;
-objects that already exist are left untouched.
+Reads Zabbix server connection details, host_name, and host_group from
+client.yaml, and all item keys from metrics.yaml.  Idempotent — safe to
+re-run; existing objects are updated (tags synced) but not recreated.
 
 What this creates
 -----------------
-  Host group  : "zabbig Clients"  (configurable via ZABBIX_HOST_GROUP env var)
-  Host        : value of zabbix.host_name in client.yaml (default: system hostname)
+  Host group  : value of zabbix.host_group in client.yaml
+  Host        : value of zabbix.host_name  in client.yaml
   Items       : one Zabbix Trapper item per enabled metric key in metrics.yaml
                 + five self-monitoring items (zabbig.client.*)
 
 Usage
 -----
   cd zabbig_client
-  python3 scripts/bootstrap_zabbix.py [--config client.yaml] [--metrics metrics.yaml]
+  python3 bootstrap.py [--config client.yaml] [--metrics metrics.yaml]
+                       [--api-url URL] [--user USER] [--password PASS]
+                       [--no-wait]
 
-Environment variables (can also be set in .env at the repo root)
-----------------------------------------------------------------
-  ZABBIX_API_URL        default: http://localhost:8080/api_jsonrpc.php
-  ZABBIX_ADMIN_USER     default: Admin
-  ZABBIX_ADMIN_PASSWORD default: zabbix
-  ZABBIX_HOST_GROUP     default: zabbig Clients
+API credentials (only needed for bootstrap, not for the sender)
+---------------------------------------------------------------
+  --user / ZABBIX_ADMIN_USER          default: Admin
+  --password / ZABBIX_ADMIN_PASSWORD  default: zabbix
+
+Dependencies (all vendored in src/ — no pip install required)
+-------------------------------------------------------------
+  requests 2.32.5, urllib3 2.6.3, certifi 2026.2.25,
+  charset-normalizer 3.4.6, idna 3.11
+
+The API URL is derived automatically from zabbix.server_host in client.yaml:
+  http://<server_host>:8080/api_jsonrpc.php
+Override with --api-url or ZABBIX_API_URL env var.
 """
-
-from __future__ import annotations
 
 import argparse
 import logging
 import os
 import re
-import socket
 import sys
 import time
 from typing import Any, Optional
 
 # ---------------------------------------------------------------------------
-# Make vendored deps (yaml) importable without installation
+# Make vendored deps (yaml, zabbig_client) importable without installation
 # ---------------------------------------------------------------------------
-_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-_SRC = os.path.join(_SCRIPT_DIR, "..", "src")
-sys.path.insert(0, _SRC)
+_HERE = os.path.dirname(os.path.abspath(__file__))
+_SRC = os.path.join(_HERE, "src")
+if _SRC not in sys.path:
+    sys.path.insert(0, _SRC)
 
 try:
-    import yaml
+    import yaml  # vendored pure-Python PyYAML
 except ImportError:
     sys.exit(
         "ERROR: PyYAML not found.\n"
-        "       Expected vendored copy at: src/yaml/__init__.py\n"
-        "       Run: python3 scripts/vendor_yaml.py"
+        "       Expected vendored copy at: src/yaml/__init__.py"
     )
 
 try:
-    import requests  # type: ignore[import]
+    import requests  # vendored in src/requests/
 except ImportError:
     sys.exit(
-        "ERROR: 'requests' is not installed.\n"
-        "       Run:  pip install requests   (only needed for this bootstrap script)"
+        "ERROR: 'requests' package not found.\n"
+        "       Expected vendored copy at: src/requests/\n"
+        "       Run: python3 scripts/vendor_requests.py"
     )
+
+from zabbig_client.config_loader import load_client_config
 
 # ---------------------------------------------------------------------------
 # Logging
@@ -78,23 +86,20 @@ log = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 try:
     from dotenv import load_dotenv  # type: ignore[import]
-    load_dotenv(os.path.join(_SCRIPT_DIR, "..", "..", ".env"))
+    load_dotenv(os.path.join(_HERE, "..", ".env"))
 except ImportError:
     pass  # python-dotenv is optional
 
 # ---------------------------------------------------------------------------
-# Defaults (can be overridden via env vars)
+# Credential defaults from env (API-only, not stored in client.yaml)
 # ---------------------------------------------------------------------------
-DEFAULT_API_URL = os.getenv("ZABBIX_API_URL", "http://localhost:8080/api_jsonrpc.php")
-DEFAULT_ADMIN_USER = os.getenv("ZABBIX_ADMIN_USER", "Admin")
-DEFAULT_ADMIN_PASSWORD = os.getenv("ZABBIX_ADMIN_PASSWORD", "zabbix")
-DEFAULT_HOST_GROUP = os.getenv("ZABBIX_HOST_GROUP", "zabbig Clients")
+_DEFAULT_USER = os.getenv("ZABBIX_ADMIN_USER", "Admin")
+_DEFAULT_PASSWORD = os.getenv("ZABBIX_ADMIN_PASSWORD", "zabbix")
 
 # ---------------------------------------------------------------------------
 # Zabbix value_type constants
 # ---------------------------------------------------------------------------
 _VT_FLOAT = 0   # Numeric float
-_VT_STR   = 1   # Character string (up to 255 chars)
 _VT_INT   = 3   # Numeric unsigned integer
 _VT_TEXT  = 4   # Text (unlimited)
 
@@ -147,29 +152,13 @@ SELF_MONITORING_ITEMS = [
     },
 ]
 
+
 # ---------------------------------------------------------------------------
-# Config loading
+# Metrics config loading
 # ---------------------------------------------------------------------------
-
-def _load_yaml(path: str) -> dict:
-    with open(path, "r", encoding="utf-8") as fh:
-        return yaml.safe_load(fh) or {}
-
-
-def load_client_config(path: str) -> dict:
-    data = _load_yaml(path)
-    zabbix = data.get("zabbix", {})
-    return {
-        "host_name": zabbix.get("host_name") or socket.gethostname(),
-    }
-
 
 def _tags_to_zabbix(tags: list) -> list[dict]:
-    """
-    Convert a list of tag strings from metrics.yaml into the Zabbix API tag
-    format: [{"tag": "<name>", "value": ""}].
-    Supports both plain strings ("cpu") and "key:value" pairs ("env:prod").
-    """
+    """Convert ["cpu", "env:prod"] → [{"tag":"cpu","value":""},{"tag":"env","value":"prod"}]."""
     result = []
     for t in tags:
         t = str(t)
@@ -183,17 +172,16 @@ def _tags_to_zabbix(tags: list) -> list[dict]:
 
 def load_metrics_config(path: str) -> list[dict]:
     """Return item defs (key, value_type, name, description, tags) for each enabled metric."""
-    data = _load_yaml(path)
-    metrics_list = data.get("metrics", [])
+    with open(path, "r", encoding="utf-8") as fh:
+        data = yaml.safe_load(fh) or {}
     result = []
-    for m in metrics_list:
+    for m in data.get("metrics", []):
         if m.get("enabled", True) is False:
             continue
         key = m.get("key")
         if not key:
             continue
-        vt_str = m.get("value_type", "float")
-        vt_int = _YAML_VT_MAP.get(str(vt_str).lower(), _VT_FLOAT)
+        vt_int = _YAML_VT_MAP.get(str(m.get("value_type", "float")).lower(), _VT_FLOAT)
         zbx_tags = _tags_to_zabbix(m.get("tags") or [])
         item: dict = {
             "name": m.get("name") or key,
@@ -322,19 +310,16 @@ class ZabbixAPI:
         key = item_def["key_"]
         iid = self.get_item_id(host_id, key)
         if iid:
-            # Item exists — update tags so re-running the bootstrap syncs them.
+            # Item exists — update tags so re-running bootstrap syncs them.
             update_params: dict = {"itemid": iid}
-            if "tags" in item_def:
-                update_params["tags"] = item_def["tags"]
-            else:
-                update_params["tags"] = []  # clear any previously set tags
+            update_params["tags"] = item_def.get("tags", [])
             self._call("item.update", update_params)
             log.info("  Item '%s' already exists (id=%s) — tags synced", key, iid)
             return iid
         params = {
             "hostid": host_id,
-            "type": 2,           # Zabbix Trapper
-            "delay": "0",        # required 0 for trapper items
+            "type": 2,      # Zabbix Trapper
+            "delay": "0",   # required 0 for trapper items
             **item_def,
         }
         iid = self._call("item.create", params)["itemids"][0]
@@ -381,20 +366,16 @@ def provision(
     log.info("Provisioning host='%s'  group='%s'", host_name, host_group)
     log.info("=" * 60)
 
-    # 1. Host group
     log.info("--- Host group ---")
     group_id = api.ensure_hostgroup(host_group)
 
-    # 2. Host
     log.info("--- Host ---")
     host_id = api.ensure_host(host_name, group_id)
 
-    # 3. Metric items
     log.info("--- Metric items (%d) ---", len(metric_items))
     for item in metric_items:
         api.ensure_item(host_id, item)
 
-    # 4. Self-monitoring items
     log.info("--- Self-monitoring items (%d) ---", len(SELF_MONITORING_ITEMS))
     for item in SELF_MONITORING_ITEMS:
         api.ensure_item(host_id, item)
@@ -408,46 +389,44 @@ def provision(
 # CLI
 # ---------------------------------------------------------------------------
 
-def _parse_args() -> argparse.Namespace:
-    here = os.path.join(_SCRIPT_DIR, "..")
+def _parse_args(default_api_url: str) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Provision a Zabbix host and trapper items for zabbig_client."
     )
     parser.add_argument(
         "--config",
-        default=os.path.join(here, "client.yaml"),
+        default=os.path.join(_HERE, "client.yaml"),
         metavar="PATH",
-        help="Path to client.yaml (default: ../client.yaml relative to this script)",
+        help="Path to client.yaml (default: client.yaml next to this script)",
     )
     parser.add_argument(
         "--metrics",
-        default=os.path.join(here, "metrics.yaml"),
+        default=os.path.join(_HERE, "metrics.yaml"),
         metavar="PATH",
-        help="Path to metrics.yaml (default: ../metrics.yaml relative to this script)",
+        help="Path to metrics.yaml (default: metrics.yaml next to this script)",
     )
     parser.add_argument(
         "--api-url",
-        default=DEFAULT_API_URL,
+        default=None,
         metavar="URL",
-        help=f"Zabbix JSON-RPC API URL (default: {DEFAULT_API_URL})",
+        help=(
+            f"Zabbix JSON-RPC API URL.  "
+            f"Defaults to http://<server_host>:8080/api_jsonrpc.php "
+            f"(derived from zabbix.server_host in client.yaml).  "
+            f"Also read from ZABBIX_API_URL env var."
+        ),
     )
     parser.add_argument(
         "--user",
-        default=DEFAULT_ADMIN_USER,
+        default=_DEFAULT_USER,
         metavar="USER",
-        help=f"Zabbix admin username (default: {DEFAULT_ADMIN_USER})",
+        help=f"Zabbix admin username (default: {_DEFAULT_USER})",
     )
     parser.add_argument(
         "--password",
-        default=DEFAULT_ADMIN_PASSWORD,
+        default=_DEFAULT_PASSWORD,
         metavar="PASS",
-        help="Zabbix admin password",
-    )
-    parser.add_argument(
-        "--host-group",
-        default=DEFAULT_HOST_GROUP,
-        metavar="GROUP",
-        help=f"Zabbix host group name (default: {DEFAULT_HOST_GROUP})",
+        help="Zabbix admin password (env: ZABBIX_ADMIN_PASSWORD)",
     )
     parser.add_argument(
         "--no-wait",
@@ -458,34 +437,42 @@ def _parse_args() -> argparse.Namespace:
 
 
 def main() -> int:
-    args = _parse_args()
+    # Parse args with a placeholder first to load client.yaml for the API URL default.
+    args = _parse_args(default_api_url="")
 
-    # Load configs
     if not os.path.exists(args.config):
         log.error("client.yaml not found: %s", args.config)
-        log.error("  Hint: cp client.yaml.example client.yaml")
         return 1
     if not os.path.exists(args.metrics):
         log.error("metrics.yaml not found: %s", args.metrics)
-        log.error("  Hint: cp metrics.yaml.example metrics.yaml")
         return 1
 
+    # Load client configuration — server_host, host_name, host_group all come from here.
     client_cfg = load_client_config(args.config)
+    zbx = client_cfg.zabbix
+
+    # Derive API URL: CLI arg > env var > default based on server_host
+    api_url = (
+        args.api_url
+        or os.getenv("ZABBIX_API_URL")
+        or f"http://{zbx.server_host}:8080/api_jsonrpc.php"
+    )
+
     metric_items = load_metrics_config(args.metrics)
-    host_name = client_cfg["host_name"]
 
-    log.info("Target host   : %s", host_name)
+    log.info("Config file   : %s", args.config)
     log.info("Metrics file  : %s (%d enabled items)", args.metrics, len(metric_items))
-    log.info("API URL       : %s", args.api_url)
+    log.info("Target host   : %s", zbx.host_name)
+    log.info("Host group    : %s", zbx.host_group)
+    log.info("API URL       : %s", api_url)
 
-    # Wait for Zabbix to be ready
     if not args.no_wait:
-        _wait_for_api(args.api_url)
+        _wait_for_api(api_url)
 
-    api = ZabbixAPI(args.api_url)
+    api = ZabbixAPI(api_url)
     try:
         api.login(args.user, args.password)
-        provision(api, host_name, args.host_group, metric_items)
+        provision(api, zbx.host_name, zbx.host_group, metric_items)
     except RuntimeError as exc:
         log.error("%s", exc)
         return 1

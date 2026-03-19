@@ -4,7 +4,7 @@ disk.py — Disk/filesystem metrics collector.
 Uses os.statvfs() — works on Linux and macOS.
 params:
   mount  — filesystem path to inspect (e.g. "/", "/data")
-  mode   — "used_percent" | "free_bytes"
+  mode   — "used_percent" | "used_bytes" | "free_bytes"
 """
 from __future__ import annotations
 
@@ -51,13 +51,15 @@ def _disk_stat(mount: str, mode: str) -> float | int:
     st = os.statvfs(mount)
     total_bytes = st.f_blocks * st.f_frsize
     free_bytes = st.f_bavail * st.f_frsize  # f_bavail = available to non-root
+    used_bytes = total_bytes - free_bytes
 
     if mode == "free_bytes":
         return free_bytes
+    elif mode == "used_bytes":
+        return used_bytes
     elif mode == "used_percent":
         if total_bytes == 0:
             return 0.0
-        used_bytes = total_bytes - free_bytes
         return round(used_bytes / total_bytes * 100.0, 2)
     else:
         raise ValueError(f"Unknown disk collector mode: '{mode}'")

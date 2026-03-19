@@ -157,6 +157,8 @@
 #   mode   string   REQUIRED
 #          used_percent  — Percentage of filesystem blocks in use.
 #                          Uses os.statvfs(); works on Linux and macOS.
+#          used_bytes    — Bytes currently used (total - available to non-root).
+#                          Uses os.statvfs(); works on Linux and macOS.
 #          free_bytes    — Bytes available to non-root users (f_bavail).
 #                          Uses os.statvfs(); works on Linux and macOS.
 #
@@ -392,6 +394,24 @@ metrics:
     params:
       mount: "/"
       mode: free_bytes
+
+  - id: disk_root_used_bytes
+    name: Root filesystem used bytes
+    description: Bytes currently used on the / filesystem.
+    # Disabled by default — enable alongside used_percent if you want the raw bytes too
+    enabled: true
+    collector: disk
+    key: host.disk.root.used_bytes
+    value_type: int
+    unit: "B"
+    delivery: batch
+    importance: normal
+    timeout_seconds: 10
+    error_policy: skip
+    tags: [system, disk]
+    params:
+      mount: "/"
+      mode: used_bytes
 
   - id: disk_data_used_percent
     name: /data filesystem used percent

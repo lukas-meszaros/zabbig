@@ -41,6 +41,7 @@ class ZabbixConfig:
     server_host: str = "127.0.0.1"
     server_port: int = 10051
     host_name: str = ""
+    host_group: str = "zabbig Clients"
     connect_timeout_seconds: float = 10.0
     send_timeout_seconds: float = 30.0
 

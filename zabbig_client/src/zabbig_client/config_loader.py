@@ -53,6 +53,7 @@ def load_client_config(path: str) -> ClientConfig:
         server_host=str(z.get("server_host", "127.0.0.1")),
         server_port=int(z.get("server_port", 10051)),
         host_name=str(z.get("host_name", socket.gethostname())),
+        host_group=str(z.get("host_group", "zabbig Clients")),
         connect_timeout_seconds=float(z.get("connect_timeout_seconds", 10.0)),
         send_timeout_seconds=float(z.get("send_timeout_seconds", 30.0)),
     )
@@ -291,7 +292,7 @@ def _validate_collector_params(metric_id: str, collector: str, params: dict, str
                 f"Metric '{metric_id}': disk collector requires params.mount (e.g. '/')", strict
             )
         mode = params.get("mode", "used_percent")
-        valid_modes = {"used_percent", "free_bytes"}
+        valid_modes = {"used_percent", "used_bytes", "free_bytes"}
         if mode not in valid_modes:
             _config_error(
                 f"Metric '{metric_id}': disk collector params.mode='{mode}' not in {valid_modes}", strict
