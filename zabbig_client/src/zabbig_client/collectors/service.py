@@ -38,8 +38,9 @@ class ServiceCollector(BaseCollector):
             source = f"systemctl is-active {service_name}"
         elif check_mode == "process":
             pattern = metric.params["process_pattern"]
-            state = await asyncio.to_thread(_process_check, pattern)
-            source = f"proc scan pattern={pattern}"
+            proc_root = metric.params.get("proc_root", "/proc")
+            state = await asyncio.to_thread(_process_check, pattern, proc_root)
+            source = f"proc scan pattern={pattern} root={proc_root}"
         else:
             raise ValueError(f"Unknown service check_mode: '{check_mode}'")
 
@@ -83,23 +84,23 @@ def _systemd_check(service_name: str) -> int:
         return 0
 
 
-def _process_check(pattern: str) -> int:
+def _process_check(pattern: str, proc_root: str) -> int:
     """
-    Scan /proc/*/cmdline for any process matching the regex pattern.
+    Scan {proc_root}/*/cmdline for any process matching the regex pattern.
     Returns 1 if at least one match found, 0 otherwise.
-    Only works on Linux (/proc filesystem).
+    Only works on Linux (/proc filesystem) or a mounted proc from another host.
     """
     compiled = re.compile(pattern)
     try:
-        proc_entries = os.scandir("/proc")
+        proc_entries = os.scandir(proc_root)
     except PermissionError as exc:
-        raise RuntimeError(f"Cannot scan /proc: {exc}") from exc
+        raise RuntimeError(f"Cannot scan {proc_root}: {exc}") from exc
 
     with proc_entries as scanner:
         for entry in scanner:
             if not entry.name.isdigit():
                 continue
-            cmdline_path = f"/proc/{entry.name}/cmdline"
+            cmdline_path = f"{proc_root}/{entry.name}/cmdline"
             try:
                 with open(cmdline_path, "rb") as fh:
                     # cmdline args separated by NUL bytes

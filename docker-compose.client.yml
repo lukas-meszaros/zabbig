@@ -1,0 +1,69 @@
+# =============================================================================
+# docker-compose.client.yml — zabbig client development/test container
+#
+# Provides a Linux container with the zabbig_client directory bind-mounted
+# for live testing.  Edit any file on the host and re-run immediately inside
+# the container — no rebuild needed.
+#
+# PREREQUISITES
+#   The main Zabbix stack must already be running:
+#     docker compose up -d
+#
+# USAGE
+#   Start container:
+#     docker compose -f docker-compose.client.yml up -d
+#
+#   Open a shell inside:
+#     docker exec -it zabbig-client bash
+#
+#   Inside the container — run a dry-run:
+#     python3 run.py --config client.docker.yaml --dry-run
+#
+#   Inside the container — real run (sends to Zabbix):
+#     python3 run.py --config client.docker.yaml
+#
+#   Inside the container — run tests:
+#     python3 -m unittest discover -s tests -v
+#
+#   Stop and remove the container:
+#     docker compose -f docker-compose.client.yml down
+#
+# NOTES
+#   - /proc inside this container is the real Linux kernel /proc (via Docker),
+#     so cpu, memory, and service collectors all work correctly.
+#   - client.docker.yaml points server_host to "zabbix-server" — the internal
+#     Docker DNS name of the Zabbix server on the shared zabbix-lab-net network.
+#   - The bind mount is read-write so you can also write logs and state files
+#     from inside the container.
+# =============================================================================
+
+services:
+
+  zabbig-client:
+    build:
+      context: .
+      dockerfile: Dockerfile.client
+    image: zabbig-client:latest
+    container_name: zabbig-client
+    # Keep the container alive indefinitely so you can exec into it at any time.
+    command: sleep infinity
+    working_dir: /app
+    volumes:
+      # Bind-mount the entire zabbig_client directory — live edits are instant.
+      - ./zabbig_client:/app:rw
+    networks:
+      - zabbix-net
+    environment:
+      # Disable .pyc file generation and enable unbuffered stdout/stderr.
+      PYTHONDONTWRITEBYTECODE: "1"
+      PYTHONUNBUFFERED: "1"
+    restart: unless-stopped
+
+# =============================================================================
+# Network — external, created by docker-compose.yml
+# =============================================================================
+networks:
+  zabbix-net:
+    # Must match the network name declared in docker-compose.yml.
+    name: zabbix-lab-net
+    external: true

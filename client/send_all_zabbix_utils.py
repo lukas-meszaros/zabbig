@@ -24,7 +24,7 @@ import sys
 # ---------------------------------------------------------------------------
 # Official Zabbix library imports (zabbix-utils v2)
 # ---------------------------------------------------------------------------
-from zabbix_utils import Sender, ItemValue  # noqa: E402
+from src.zabbix_utils import Sender, ItemValue  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Configuration

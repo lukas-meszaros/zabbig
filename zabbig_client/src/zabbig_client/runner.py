@@ -14,6 +14,7 @@ Design:
 from __future__ import annotations
 
 import asyncio
+import dataclasses
 import logging
 import time
 from typing import List, Tuple
@@ -53,8 +54,15 @@ async def run_all_collectors(
 
     semaphore = asyncio.Semaphore(config.runtime.max_concurrency)
 
+    proc_root = config.runtime.proc_root
+
     async def run_one(metric: MetricDef) -> MetricResult:
         async with semaphore:
+            # Inject the global proc_root into params if not overridden per-metric.
+            if "proc_root" not in metric.params:
+                metric = dataclasses.replace(
+                    metric, params={**metric.params, "proc_root": proc_root}
+                )
             collector_cls = get_collector(metric.collector)
             collector = collector_cls()
             t0 = time.monotonic()

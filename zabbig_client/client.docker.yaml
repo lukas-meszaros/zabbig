@@ -1,0 +1,23 @@
+# =============================================================================
+# client.docker.yaml — Zabbix connection config for use inside the Docker
+# test container (docker-compose.client.yml).
+#
+# Uses Docker's internal DNS to reach the Zabbix server by its service name
+# instead of 127.0.0.1 (which is only valid on the macOS host).
+#
+# Usage:
+#   python3 run.py --config client.docker.yaml
+#   python3 run.py --config client.docker.yaml --dry-run
+# =============================================================================
+
+zabbix:
+  # "zabbix-server" resolves via Docker DNS on the shared zabbix-lab-net network.
+  server_host: "zabbix-server"
+  server_port: 10051
+  host_name: "prod-server-01"
+  connect_timeout_seconds: 10
+  send_timeout_seconds: 30
+
+runtime:
+  # /proc is the real Linux kernel proc inside the Docker container.
+  proc_root: "/proc"

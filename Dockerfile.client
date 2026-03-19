@@ -1,0 +1,78 @@
+# =============================================================================
+# Dockerfile.client — Development/test image for zabbig_client
+#
+# Based on python:3.11-slim.  Adds a mock systemctl that implements the
+# `is-active --quiet <service>` interface used by the service collector.
+# The mock delegates to pgrep, so it returns 1 (active) when a process
+# matching the service name is running, 0 otherwise — identical behaviour
+# to the real systemctl on a production Linux host.
+#
+# The zabbig_client directory is NOT baked into the image; it is
+# bind-mounted at runtime (see docker-compose.client.yml).
+# =============================================================================
+
+FROM python:3.11-slim
+
+# Install procps (provides pgrep) — needed by the mock systemctl.
+RUN apt-get update -qq && \
+    apt-get install -y --no-install-recommends procps && \
+    rm -rf /var/lib/apt/lists/*
+
+# ---------------------------------------------------------------------------
+# Mock systemctl
+#
+# Supports the subset used by service.py:
+#   systemctl is-active [--quiet] [--] <unit>
+#
+# Exit codes match the real systemctl:
+#   0  — active (process found)
+#   3  — inactive (process not found)
+# ---------------------------------------------------------------------------
+RUN cat > /usr/local/bin/systemctl <<'EOF'
+#!/bin/sh
+# mock systemctl — implements `is-active [--quiet] <unit>` via pgrep.
+# All other subcommands print a notice and exit 1.
+
+QUIET=0
+CMD=""
+UNIT=""
+
+for arg in "$@"; do
+    case "$arg" in
+        is-active)  CMD="is-active" ;;
+        --quiet|-q) QUIET=1 ;;
+        --*)        ;;           # ignore other flags (--no-pager, etc.)
+        *)
+            if [ -n "$CMD" ] && [ -z "$UNIT" ]; then
+                UNIT="$arg"
+            elif [ -z "$CMD" ]; then
+                CMD="$arg"
+            fi
+            ;;
+    esac
+done
+
+if [ "$CMD" != "is-active" ]; then
+    echo "mock systemctl: '$CMD' not supported in this test container" >&2
+    exit 1
+fi
+
+if [ -z "$UNIT" ]; then
+    echo "mock systemctl: missing unit name" >&2
+    exit 1
+fi
+
+# Strip .service suffix if present (e.g. nginx.service -> nginx).
+UNIT="${UNIT%.service}"
+
+if pgrep -x "$UNIT" > /dev/null 2>&1; then
+    [ "$QUIET" -eq 0 ] && echo "active"
+    exit 0
+else
+    [ "$QUIET" -eq 0 ] && echo "inactive"
+    exit 3
+fi
+EOF
+RUN chmod +x /usr/local/bin/systemctl
+
+WORKDIR /app

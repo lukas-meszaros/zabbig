@@ -22,9 +22,10 @@ class MemoryCollector(BaseCollector):
 
     async def collect(self, metric: MetricDef) -> MetricResult:
         mode = metric.params.get("mode", "used_percent")
+        proc_root = metric.params.get("proc_root", "/proc")
         t0 = time.monotonic()
 
-        info = await asyncio.to_thread(_read_meminfo)
+        info = await asyncio.to_thread(_read_meminfo, proc_root)
 
         if mode == "used_percent":
             value = _mem_used_percent(info)
@@ -46,7 +47,7 @@ class MemoryCollector(BaseCollector):
             status=RESULT_OK,
             unit=metric.unit,
             tags=metric.tags,
-            source=f"/proc/meminfo (mode={mode})",
+            source=f"{proc_root}/meminfo (mode={mode})",
             duration_ms=(time.monotonic() - t0) * 1000,
         )
 
@@ -55,10 +56,10 @@ class MemoryCollector(BaseCollector):
 # Blocking helpers
 # ---------------------------------------------------------------------------
 
-def _read_meminfo() -> dict[str, int]:
-    """Parse /proc/meminfo and return a dict of key → kibibytes."""
+def _read_meminfo(proc_root: str) -> dict[str, int]:
+    """Parse {proc_root}/meminfo and return a dict of key → kibibytes."""
     result: dict[str, int] = {}
-    with open("/proc/meminfo", "r") as fh:
+    with open(f"{proc_root}/meminfo", "r") as fh:
         for line in fh:
             parts = line.split()
             if len(parts) >= 2:

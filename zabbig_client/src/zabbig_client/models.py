@@ -52,6 +52,7 @@ class RuntimeConfig:
     lock_file: str = "/tmp/zabbig_client.lock"
     dry_run: bool = False
     fail_fast: bool = False
+    proc_root: str = "/proc"
 
 
 @dataclass

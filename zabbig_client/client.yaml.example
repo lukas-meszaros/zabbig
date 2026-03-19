@@ -50,6 +50,15 @@ runtime:
   # Normally false — partial failure is tolerated and successful metrics are still sent.
   fail_fast: false
 
+  # Root path of the Linux proc filesystem.
+  # Default is /proc (correct for any native Linux host).
+  # Override this when monitoring a Linux system remotely or via a bind-mount:
+  #   - Docker container proc mounted on macOS:  proc_root: "/host/proc"
+  #   - Mounted from a remote NFS/SSH mount:     proc_root: "/mnt/remote/proc"
+  # Affects: cpu, memory, and service (process check) collectors.
+  # Individual metrics can also set params.proc_root to override this value.
+  proc_root: "/proc"
+
 # ---------------------------------------------------------------------------
 # Batching and delivery timing
 # ---------------------------------------------------------------------------

@@ -106,12 +106,19 @@
 #
 #   fallback_value   string    REQUIRED when error_policy is "fallback".
 #                              The value sent to Zabbix when the collector
-#                              fails or times out.
-#                              Must be a string (quote numeric values).
-#                              Example: "0"
+#                              fails or times out. Must be a string (quote
+#                              numeric values). Example: "0"
 #
 #   params           map       REQUIRED. Collector-specific parameters.
 #                              See per-collector sections below.
+#
+#   params.proc_root string    UNIVERSAL OVERRIDE for proc-based collectors
+#                              (cpu, memory, service/process).
+#                              Overrides runtime.proc_root from client.yaml
+#                              for this specific metric only.
+#                              Default: value of runtime.proc_root (which
+#                              itself defaults to "/proc").
+#                              Example: proc_root: "/host/proc"
 #
 # -----------------------------------------------------------------------------
 # PARAMS — cpu collector
@@ -123,6 +130,9 @@
 #          load5     — 5-minute load average from /proc/loadavg.
 #          load15    — 15-minute load average from /proc/loadavg.
 #          uptime    — System uptime in seconds from /proc/uptime.
+#
+#   proc_root  string  Optional. Overrides runtime.proc_root for this metric.
+#                      Default: runtime.proc_root (which defaults to "/proc").
 #
 # -----------------------------------------------------------------------------
 # PARAMS — memory collector
@@ -137,6 +147,9 @@
 #          swap_used_percent  — Swap in use as a percentage.
 #                               Returns 0.0 when no swap is configured.
 #                               Source: SwapTotal / SwapFree in /proc/meminfo.
+#
+#   proc_root  string  Optional. Overrides runtime.proc_root for this metric.
+#                      Default: runtime.proc_root (which defaults to "/proc").
 #
 # -----------------------------------------------------------------------------
 # PARAMS — disk collector
@@ -157,7 +170,7 @@
 #                   systemd  — Runs `systemctl is-active --quiet <service_name>`.
 #                              Returns 1 if exit code 0, 0 otherwise.
 #                              Requires systemd and a Linux host.
-#                   process  — Scans /proc/*/cmdline for a matching process.
+#                   process  — Scans {proc_root}/*/cmdline for a matching process.
 #                              Returns 1 if at least one process matches,
 #                              0 otherwise. Requires Linux /proc filesystem.
 #
@@ -170,6 +183,10 @@
 #                            cmdline string. Case-sensitive.
 #                            Example: "cron"  matches crond, cron, anacron, etc.
 #                            Example: "nginx: master"  for strict nginx check.
+#
+#   proc_root       string   Optional. Applies only to check_mode: process.
+#                            Overrides runtime.proc_root for this metric.
+#                            Default: runtime.proc_root (which defaults to "/proc").
 #
 # =============================================================================
 

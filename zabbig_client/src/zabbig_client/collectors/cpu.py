@@ -27,14 +27,15 @@ class CpuCollector(BaseCollector):
 
     async def collect(self, metric: MetricDef) -> MetricResult:
         mode = metric.params.get("mode", "percent")
+        proc_root = metric.params.get("proc_root", "/proc")
         t0 = time.monotonic()
 
         if mode == "percent":
-            value = await asyncio.to_thread(_cpu_percent)
+            value = await asyncio.to_thread(_cpu_percent, proc_root)
         elif mode in ("load1", "load5", "load15"):
-            value = await asyncio.to_thread(_load_avg, mode)
+            value = await asyncio.to_thread(_load_avg, mode, proc_root)
         elif mode == "uptime":
-            value = await asyncio.to_thread(_uptime_seconds)
+            value = await asyncio.to_thread(_uptime_seconds, proc_root)
         else:
             raise ValueError(f"Unknown cpu collector mode: '{mode}'")
 
@@ -49,7 +50,7 @@ class CpuCollector(BaseCollector):
             status=RESULT_OK,
             unit=metric.unit,
             tags=metric.tags,
-            source=f"/proc/stat (mode={mode})",
+            source=f"{proc_root}/stat (mode={mode})",
             duration_ms=(time.monotonic() - t0) * 1000,
         )
 
@@ -58,9 +59,9 @@ class CpuCollector(BaseCollector):
 # Blocking helpers (run in thread pool)
 # ---------------------------------------------------------------------------
 
-def _read_proc_stat_cpu() -> tuple[int, int]:
-    """Return (total_jiffies, idle_jiffies) from the first line of /proc/stat."""
-    with open("/proc/stat", "r") as fh:
+def _read_proc_stat_cpu(proc_root: str) -> tuple[int, int]:
+    """Return (total_jiffies, idle_jiffies) from the first line of {proc_root}/stat."""
+    with open(f"{proc_root}/stat", "r") as fh:
         line = fh.readline()
     # cpu  user nice system idle iowait irq softirq steal guest guest_nice
     parts = line.split()
@@ -73,14 +74,14 @@ def _read_proc_stat_cpu() -> tuple[int, int]:
     return total, idle
 
 
-def _cpu_percent() -> float:
+def _cpu_percent(proc_root: str) -> float:
     """
-    Measure CPU utilization by reading /proc/stat twice with a 0.2s gap.
+    Measure CPU utilization by reading {proc_root}/stat twice with a 0.2s gap.
     Returns a float in [0.0, 100.0].
     """
-    t1, i1 = _read_proc_stat_cpu()
+    t1, i1 = _read_proc_stat_cpu(proc_root)
     time.sleep(0.2)
-    t2, i2 = _read_proc_stat_cpu()
+    t2, i2 = _read_proc_stat_cpu(proc_root)
 
     delta_total = t2 - t1
     delta_idle = i2 - i1
@@ -90,15 +91,15 @@ def _cpu_percent() -> float:
     return round((1.0 - delta_idle / delta_total) * 100.0, 2)
 
 
-def _load_avg(mode: str) -> float:
-    """Read /proc/loadavg and return the requested average."""
-    with open("/proc/loadavg", "r") as fh:
+def _load_avg(mode: str, proc_root: str) -> float:
+    """Read {proc_root}/loadavg and return the requested average."""
+    with open(f"{proc_root}/loadavg", "r") as fh:
         parts = fh.read().split()
     mapping = {"load1": 0, "load5": 1, "load15": 2}
     return float(parts[mapping[mode]])
 
 
-def _uptime_seconds() -> float:
-    """Read /proc/uptime and return uptime in seconds."""
-    with open("/proc/uptime", "r") as fh:
+def _uptime_seconds(proc_root: str) -> float:
+    """Read {proc_root}/uptime and return uptime in seconds."""
+    with open(f"{proc_root}/uptime", "r") as fh:
         return float(fh.read().split()[0])
