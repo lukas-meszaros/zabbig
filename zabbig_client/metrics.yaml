@@ -1,9 +1,6 @@
 # =============================================================================
 # metrics.yaml — Metric definitions for the zabbig monitoring client
 #
-# Copy the example file to start:
-#   cp metrics.yaml.example metrics.yaml
-#
 # -----------------------------------------------------------------------------
 # TOP-LEVEL STRUCTURE
 # -----------------------------------------------------------------------------

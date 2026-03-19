@@ -1,8 +1,5 @@
 # =============================================================================
-# client.yaml.example — Runtime and connection configuration for zabbig client
-#
-# Copy to client.yaml and adjust for your environment:
-#   cp client.yaml.example client.yaml
+# client.yaml — Runtime and connection configuration for zabbig client
 #
 # All fields are optional; defaults shown in comments.
 # =============================================================================
