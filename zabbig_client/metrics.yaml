@@ -155,12 +155,22 @@
 #                   Example: "/"  "/data"  "/var"
 #
 #   mode   string   REQUIRED
-#          used_percent  — Percentage of filesystem blocks in use.
-#                          Uses os.statvfs(); works on Linux and macOS.
-#          used_bytes    — Bytes currently used (total - available to non-root).
-#                          Uses os.statvfs(); works on Linux and macOS.
-#          free_bytes    — Bytes available to non-root users (f_bavail).
-#                          Uses os.statvfs(); works on Linux and macOS.
+#          used_percent        — Percentage of filesystem blocks in use.
+#                                Uses os.statvfs(); works on Linux and macOS.
+#          used_bytes          — Bytes currently used (total - available to non-root).
+#                                Uses os.statvfs(); works on Linux and macOS.
+#          free_bytes          — Bytes available to non-root users (f_bavail).
+#                                Uses os.statvfs(); works on Linux and macOS.
+#          inodes_used_percent — Inode slots in use as a percentage of the total.
+#                                Returns 0.0 on filesystems with dynamic inode
+#                                allocation (e.g. btrfs) where f_files == 0.
+#                                Uses os.statvfs(); works on Linux and macOS.
+#          inodes_used         — Number of inode slots currently in use.
+#                                Uses os.statvfs(); works on Linux and macOS.
+#          inodes_free         — Number of free inode slots (f_ffree).
+#                                Uses os.statvfs(); works on Linux and macOS.
+#          inodes_total        — Total inode slots on the filesystem (f_files).
+#                                Uses os.statvfs(); works on Linux and macOS.
 #
 # -----------------------------------------------------------------------------
 # PARAMS — service collector
@@ -430,6 +440,76 @@ metrics:
     params:
       mount: "/data"
       mode: used_percent
+
+  # ---- Inodes ------------------------------------------------------------
+
+  - id: disk_root_inodes_used_percent
+    name: Root filesystem inodes used percent
+    description: Percentage of inode slots in use on the / filesystem.
+    enabled: true
+    collector: disk
+    key: host.disk.root.inodes_used_percent
+    value_type: float
+    unit: "%"
+    delivery: batch
+    importance: high
+    timeout_seconds: 10
+    error_policy: skip
+    tags: [system, disk, inodes]
+    params:
+      mount: "/"
+      mode: inodes_used_percent
+
+  - id: disk_root_inodes_free
+    name: Root filesystem inodes free
+    description: Number of free inode slots on the / filesystem.
+    enabled: true
+    collector: disk
+    key: host.disk.root.inodes_free
+    value_type: int
+    unit: ""
+    delivery: batch
+    importance: normal
+    timeout_seconds: 10
+    error_policy: skip
+    tags: [system, disk, inodes]
+    params:
+      mount: "/"
+      mode: inodes_free
+
+  - id: disk_root_inodes_used
+    name: Root filesystem inodes used
+    description: Number of inode slots currently in use on the / filesystem.
+    enabled: false
+    collector: disk
+    key: host.disk.root.inodes_used
+    value_type: int
+    unit: ""
+    delivery: batch
+    importance: low
+    timeout_seconds: 10
+    error_policy: skip
+    tags: [system, disk, inodes]
+    params:
+      mount: "/"
+      mode: inodes_used
+
+  - id: disk_root_inodes_total
+    name: Root filesystem inodes total
+    description: Total inode slots on the / filesystem. Useful as a capacity reference.
+    enabled: false
+    collector: disk
+    key: host.disk.root.inodes_total
+    value_type: int
+    unit: ""
+    delivery: batch
+    importance: low
+    timeout_seconds: 10
+    error_policy: skip
+    tags: [system, disk, inodes]
+    params:
+      mount: "/"
+      mode: inodes_total
 
   # ---- Services ----------------------------------------------------------
 

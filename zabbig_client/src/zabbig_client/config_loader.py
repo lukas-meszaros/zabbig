@@ -292,7 +292,10 @@ def _validate_collector_params(metric_id: str, collector: str, params: dict, str
                 f"Metric '{metric_id}': disk collector requires params.mount (e.g. '/')", strict
             )
         mode = params.get("mode", "used_percent")
-        valid_modes = {"used_percent", "used_bytes", "free_bytes"}
+        valid_modes = {
+            "used_percent", "used_bytes", "free_bytes",
+            "inodes_used_percent", "inodes_used", "inodes_free", "inodes_total",
+        }
         if mode not in valid_modes:
             _config_error(
                 f"Metric '{metric_id}': disk collector params.mode='{mode}' not in {valid_modes}", strict
