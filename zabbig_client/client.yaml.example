@@ -1,0 +1,125 @@
+# =============================================================================
+# client.yaml.example — Runtime and connection configuration for zabbig client
+#
+# Copy to client.yaml and adjust for your environment:
+#   cp client.yaml.example client.yaml
+#
+# All fields are optional; defaults shown in comments.
+# =============================================================================
+
+# ---------------------------------------------------------------------------
+# Zabbix server connection
+# ---------------------------------------------------------------------------
+zabbix:
+  # IP or hostname of your Zabbix server (trapper port)
+  server_host: "127.0.0.1"
+
+  # Zabbix trapper port (default: 10051)
+  server_port: 10051
+
+  # The Zabbix host name as configured in the Zabbix frontend.
+  # Metrics sent with this host name are matched to the corresponding host.
+  # Defaults to the system hostname if left empty.
+  host_name: "prod-server-01"
+
+  # TCP connection timeout in seconds
+  connect_timeout_seconds: 10
+
+  # Timeout for the full send operation in seconds
+  send_timeout_seconds: 30
+
+# ---------------------------------------------------------------------------
+# Runtime behaviour
+# ---------------------------------------------------------------------------
+runtime:
+  # Hard wall-clock limit for the entire client run (seconds).
+  # Should be < cron interval (e.g. < 300 for a 5-minute cron).
+  overall_timeout_seconds: 240
+
+  # Maximum number of collectors running concurrently.
+  max_concurrency: 8
+
+  # PID lock file path — prevents overlapping cron executions.
+  lock_file: "/tmp/zabbig_client.lock"
+
+  # dry_run: collect metrics but do not send to Zabbix.
+  # Useful for testing configs and verifying collectors work.
+  dry_run: false
+
+  # fail_fast: abort the run immediately if any collector raises an unhandled error.
+  # Normally false — partial failure is tolerated and successful metrics are still sent.
+  fail_fast: false
+
+# ---------------------------------------------------------------------------
+# Batching and delivery timing
+# ---------------------------------------------------------------------------
+batching:
+  # How long (seconds) to wait for batch-mode collectors to finish.
+  # Collectors still running after this window are cancelled and marked timed-out.
+  # Completed batch metrics accumulated so far are still sent.
+  batch_collection_window_seconds: 60
+
+  # Maximum number of ItemValue entries per Zabbix send call.
+  batch_send_max_size: 250
+
+  # If true, immediate-mode metrics are sent in a separate send call before batch metrics.
+  # If false, all metrics are merged into the batch send call.
+  flush_immediate_separately: true
+
+  # How long (ms) to wait for additional immediate metrics before flushing.
+  # Helps group several fast immediate collectors into one send call.
+  immediate_micro_batch_window_ms: 200
+
+# ---------------------------------------------------------------------------
+# Logging
+# ---------------------------------------------------------------------------
+logging:
+  # Log level: DEBUG | INFO | WARNING | ERROR | CRITICAL
+  level: INFO
+
+  # Output format: text | json
+  # json is recommended for log aggregation systems (ELK, Loki, etc.)
+  format: text
+
+  # Optional log file path. If set, logs are written here in addition to console.
+  # The file is rotated at 10 MB, keeping 5 backups.
+  # file: "/var/log/zabbig/client.log"
+
+  # Write logs to stderr (console). Set false to suppress console output in cron.
+  console: true
+
+# ---------------------------------------------------------------------------
+# State persistence (optional)
+# ---------------------------------------------------------------------------
+state:
+  # Enable writing last-run state to a JSON file.
+  # Useful for tracking consecutive failures and last successful run time.
+  enabled: true
+
+  # Directory where last_run.json is written.
+  # Must be writable by the cron user.
+  directory: "state"
+
+# ---------------------------------------------------------------------------
+# Feature flags
+# ---------------------------------------------------------------------------
+features:
+  # Send client self-monitoring metrics to Zabbix:
+  #   zabbig.client.run.success
+  #   zabbig.client.collectors.total
+  #   zabbig.client.collectors.failed
+  #   zabbig.client.duration_ms
+  #   zabbig.client.metrics.sent
+  # These require trapper items configured in Zabbix for the host.
+  self_monitoring_metrics: true
+
+  # Emit a failure-state result for mark_failed metrics (for custom handling).
+  emit_partial_failure_metrics: false
+
+  # If true, config validation errors raise and abort the run.
+  # If false, config warnings are logged and execution continues with defaults.
+  strict_config_validation: true
+
+  # Skip metrics where enabled: false in metrics.yaml.
+  # Normally true. Set false only for debugging.
+  skip_disabled_metrics: true

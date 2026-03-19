@@ -1,0 +1,9 @@
+{
+  "last_run_ts": 1773907095,
+  "success": false,
+  "duration_ms": 21.4,
+  "metrics_sent": 4,
+  "collectors_failed": 1,
+  "sender_failures": 0,
+  "consecutive_failures": 2
+}

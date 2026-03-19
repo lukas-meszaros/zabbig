@@ -1,0 +1,457 @@
+# =============================================================================
+# metrics.yaml — Metric definitions for the zabbig monitoring client
+#
+# Copy the example file to start:
+#   cp metrics.yaml.example metrics.yaml
+#
+# -----------------------------------------------------------------------------
+# TOP-LEVEL STRUCTURE
+# -----------------------------------------------------------------------------
+#
+#   version            integer   Schema version. Must be 1.
+#
+#   defaults           map       Global defaults applied to every metric entry
+#                                unless overridden at a lower level.
+#
+#   collector_defaults map       Per-collector overrides of the global defaults.
+#                                Keys are collector names (cpu, memory, disk,
+#                                service). Values support the same fields as
+#                                defaults.
+#
+#   metrics            list      Ordered list of individual metric definitions.
+#                                Each entry is one data point sent to Zabbix.
+#
+# -----------------------------------------------------------------------------
+# DEFAULTS / COLLECTOR_DEFAULTS FIELDS
+# -----------------------------------------------------------------------------
+# These fields can appear under both `defaults` and `collector_defaults.<name>`.
+# A more specific scope always wins:
+#   metric field  >  collector_defaults  >  defaults
+#
+#   enabled          bool      true | false
+#                              Whether to run and send this metric.
+#                              Default: true
+#
+#   delivery         string    batch | immediate
+#                              batch     — collected within the batch window,
+#                                          then sent together in one request.
+#                              immediate — sent as soon as the value is ready,
+#                                          before the batch window closes.
+#                                          Use for time-sensitive checks (e.g.
+#                                          service state).
+#                              Default: batch
+#
+#   timeout_seconds  float     > 0
+#                              How long to wait for the collector to return a
+#                              value before it is considered timed out. The
+#                              error_policy then applies.
+#                              Default: 10
+#
+#   error_policy     string    skip | fallback | mark_failed
+#                              skip        — Silently discard the metric for
+#                                            this run. Nothing is sent to
+#                                            Zabbix. The run summary counts it
+#                                            as "skipped".
+#                              fallback    — Send fallback_value to Zabbix
+#                                            instead of the real value. Useful
+#                                            when a missing feature (e.g. no
+#                                            swap) should report a known-good
+#                                            sentinel (e.g. "0").
+#                                            Requires fallback_value to be set
+#                                            on the metric entry.
+#                              mark_failed — Log an error and count the metric
+#                                            as failed in the run summary. Does
+#                                            not send anything to Zabbix.
+#                              Default: skip
+#
+#   importance       string    low | normal | high | critical
+#                              Informational label used in log output and the
+#                              run summary. Does not affect send behaviour.
+#                              Default: normal
+#
+#   tags             list      Arbitrary string labels (e.g. [system, cpu]).
+#                              Informational only — used for filtering in logs.
+#                              Default: []
+#
+# -----------------------------------------------------------------------------
+# METRIC ENTRY FIELDS
+# -----------------------------------------------------------------------------
+# Each entry under `metrics` supports the fields above (enabled, delivery,
+# timeout_seconds, error_policy, importance, tags) plus the following:
+#
+#   id               string    REQUIRED. Unique identifier for this metric
+#                              within this file. Used in logs and state files.
+#                              Example: cpu_util
+#
+#   name             string    Optional. Human-readable display name shown in
+#                              log output.
+#                              Example: "CPU utilization percent"
+#
+#   description      string    Optional. Longer free-text description. Supports
+#                              YAML block scalars (> or |).
+#
+#   collector        string    REQUIRED. Which built-in collector to use.
+#                              Valid values: cpu | memory | disk | service
+#
+#   key              string    REQUIRED. Zabbix item key. Must exactly match a
+#                              Zabbix Trapper item configured on the target host.
+#                              Example: host.cpu.util
+#
+#   value_type       string    float | int | string
+#                              Informational hint only. Does not affect the wire
+#                              format — all values are sent as strings.
+#
+#   unit             string    Informational unit label (e.g. "%", "B", "s").
+#                              Not sent to Zabbix; used in logs only.
+#
+#   fallback_value   string    REQUIRED when error_policy is "fallback".
+#                              The value sent to Zabbix when the collector
+#                              fails or times out.
+#                              Must be a string (quote numeric values).
+#                              Example: "0"
+#
+#   params           map       REQUIRED. Collector-specific parameters.
+#                              See per-collector sections below.
+#
+# -----------------------------------------------------------------------------
+# PARAMS — cpu collector
+# -----------------------------------------------------------------------------
+#   mode   string   REQUIRED
+#          percent   — Total CPU utilisation 0-100. Calculated from two
+#                      /proc/stat reads 200 ms apart (requires Linux).
+#          load1     — 1-minute load average from /proc/loadavg.
+#          load5     — 5-minute load average from /proc/loadavg.
+#          load15    — 15-minute load average from /proc/loadavg.
+#          uptime    — System uptime in seconds from /proc/uptime.
+#
+# -----------------------------------------------------------------------------
+# PARAMS — memory collector
+# -----------------------------------------------------------------------------
+#   mode   string   REQUIRED
+#          used_percent       — RAM in use as a percentage.
+#                               Calculated as (MemTotal - MemAvailable) /
+#                               MemTotal * 100. Source: /proc/meminfo.
+#          available_bytes    — MemAvailable field from /proc/meminfo (bytes).
+#                               Represents memory available for new allocations
+#                               without swapping.
+#          swap_used_percent  — Swap in use as a percentage.
+#                               Returns 0.0 when no swap is configured.
+#                               Source: SwapTotal / SwapFree in /proc/meminfo.
+#
+# -----------------------------------------------------------------------------
+# PARAMS — disk collector
+# -----------------------------------------------------------------------------
+#   mount  string   REQUIRED. Absolute path to the mount point to inspect.
+#                   Example: "/"  "/data"  "/var"
+#
+#   mode   string   REQUIRED
+#          used_percent  — Percentage of filesystem blocks in use.
+#                          Uses os.statvfs(); works on Linux and macOS.
+#          free_bytes    — Bytes available to non-root users (f_bavail).
+#                          Uses os.statvfs(); works on Linux and macOS.
+#
+# -----------------------------------------------------------------------------
+# PARAMS — service collector
+# -----------------------------------------------------------------------------
+#   check_mode      string   REQUIRED
+#                   systemd  — Runs `systemctl is-active --quiet <service_name>`.
+#                              Returns 1 if exit code 0, 0 otherwise.
+#                              Requires systemd and a Linux host.
+#                   process  — Scans /proc/*/cmdline for a matching process.
+#                              Returns 1 if at least one process matches,
+#                              0 otherwise. Requires Linux /proc filesystem.
+#
+#   service_name    string   REQUIRED when check_mode is "systemd".
+#                            The systemd unit name (without .service suffix).
+#                            Example: sshd  nginx  postgresql
+#
+#   process_pattern string   REQUIRED when check_mode is "process".
+#                            Python regex matched against each process's full
+#                            cmdline string. Case-sensitive.
+#                            Example: "cron"  matches crond, cron, anacron, etc.
+#                            Example: "nginx: master"  for strict nginx check.
+#
+# =============================================================================
+
+version: 1
+
+# ---------------------------------------------------------------------------
+# Global defaults — applied to every metric unless overridden at a lower level
+# ---------------------------------------------------------------------------
+defaults:
+  enabled: true
+  delivery: batch
+  timeout_seconds: 10
+  error_policy: skip
+  importance: normal
+  tags: []
+
+# ---------------------------------------------------------------------------
+# Collector-level defaults — override global defaults for a specific collector
+# ---------------------------------------------------------------------------
+collector_defaults:
+  cpu:
+    timeout_seconds: 5
+    delivery: batch
+  memory:
+    timeout_seconds: 5
+    delivery: batch
+  disk:
+    timeout_seconds: 10
+    delivery: batch
+  service:
+    timeout_seconds: 8
+    delivery: immediate     # service state changes are sent immediately
+
+# ---------------------------------------------------------------------------
+# Metrics
+# ---------------------------------------------------------------------------
+metrics:
+
+  # ---- CPU ---------------------------------------------------------------
+
+  - id: cpu_util
+    name: CPU utilization percent
+    description: Current total CPU utilization as a percentage.
+    enabled: true
+    collector: cpu
+    key: host.cpu.util
+    value_type: float
+    unit: "%"
+    delivery: batch
+    importance: normal
+    timeout_seconds: 5
+    error_policy: skip
+    tags: [system, cpu]
+    params:
+      mode: percent
+
+  - id: load_avg_1
+    name: Load average 1-minute
+    description: System load average over 1 minute.
+    enabled: true
+    collector: cpu
+    key: host.cpu.load1
+    value_type: float
+    unit: ""
+    delivery: batch
+    importance: normal
+    timeout_seconds: 5
+    error_policy: skip
+    tags: [system, cpu]
+    params:
+      mode: load1
+
+  - id: load_avg_5
+    name: Load average 5-minute
+    description: System load average over 5 minutes.
+    enabled: true
+    collector: cpu
+    key: host.cpu.load5
+    value_type: float
+    unit: ""
+    delivery: batch
+    importance: normal
+    timeout_seconds: 5
+    error_policy: skip
+    tags: [system, cpu]
+    params:
+      mode: load5
+
+  - id: load_avg_15
+    name: Load average 15-minute
+    description: System load average over 15 minutes.
+    # Disabled — enables: false means this metric is skipped entirely
+    enabled: false
+    collector: cpu
+    key: host.cpu.load15
+    value_type: float
+    unit: ""
+    delivery: batch
+    importance: low
+    timeout_seconds: 5
+    error_policy: skip
+    tags: [system, cpu]
+    params:
+      mode: load15
+
+  - id: uptime
+    name: System uptime seconds
+    description: How long the system has been running, in seconds.
+    enabled: true
+    collector: cpu
+    key: host.system.uptime
+    value_type: float
+    unit: "s"
+    delivery: batch
+    importance: low
+    timeout_seconds: 5
+    error_policy: skip
+    tags: [system]
+    params:
+      mode: uptime
+
+  # ---- Memory ------------------------------------------------------------
+
+  - id: mem_used_percent
+    name: Memory used percent
+    description: Percentage of RAM currently in use.
+    enabled: true
+    collector: memory
+    key: host.memory.used_percent
+    value_type: float
+    unit: "%"
+    delivery: batch
+    importance: normal
+    timeout_seconds: 5
+    error_policy: skip
+    tags: [system, memory]
+    params:
+      mode: used_percent
+
+  - id: mem_available_bytes
+    name: Memory available bytes
+    description: Amount of RAM available for new allocations (MemAvailable).
+    enabled: true
+    collector: memory
+    key: host.memory.available_bytes
+    value_type: int
+    unit: "B"
+    delivery: batch
+    importance: normal
+    timeout_seconds: 5
+    error_policy: skip
+    tags: [system, memory]
+    params:
+      mode: available_bytes
+
+  - id: swap_used_percent
+    name: Swap used percent
+    description: Percentage of swap space in use. Returns 0 if no swap is configured.
+    enabled: true
+    collector: memory
+    key: host.memory.swap_used_percent
+    value_type: float
+    unit: "%"
+    delivery: batch
+    importance: low
+    timeout_seconds: 5
+    # fallback to 0 if /proc/meminfo is unreadable (should not happen normally)
+    error_policy: fallback
+    fallback_value: "0"
+    tags: [system, memory]
+    params:
+      mode: swap_used_percent
+
+  # ---- Disk --------------------------------------------------------------
+
+  - id: disk_root_used_percent
+    name: Root filesystem used percent
+    description: Percentage of / filesystem used.
+    enabled: true
+    collector: disk
+    key: host.disk.root.used_percent
+    value_type: float
+    unit: "%"
+    delivery: batch
+    importance: high
+    timeout_seconds: 10
+    error_policy: skip
+    tags: [system, disk]
+    params:
+      mount: "/"
+      mode: used_percent
+
+  - id: disk_root_free_bytes
+    name: Root filesystem free bytes
+    description: Free bytes on the / filesystem (available to non-root).
+    enabled: true
+    collector: disk
+    key: host.disk.root.free_bytes
+    value_type: int
+    unit: "B"
+    delivery: batch
+    importance: high
+    timeout_seconds: 10
+    error_policy: skip
+    tags: [system, disk]
+    params:
+      mount: "/"
+      mode: free_bytes
+
+  - id: disk_data_used_percent
+    name: /data filesystem used percent
+    description: Percentage of /data filesystem used.
+    # Disabled — enable if you have a separate data partition
+    enabled: false
+    collector: disk
+    key: host.disk.data.used_percent
+    value_type: float
+    unit: "%"
+    delivery: batch
+    importance: normal
+    timeout_seconds: 10
+    error_policy: skip
+    tags: [system, disk]
+    params:
+      mount: "/data"
+      mode: used_percent
+
+  # ---- Services ----------------------------------------------------------
+
+  - id: svc_sshd
+    name: sshd service state
+    description: >
+      1 = sshd is active (running), 0 = sshd is not active.
+      Uses systemd check (systemctl is-active sshd).
+    enabled: true
+    collector: service
+    key: host.service.sshd
+    value_type: int
+    unit: ""
+    delivery: immediate     # service checks are sent immediately when collected
+    importance: critical
+    timeout_seconds: 8
+    error_policy: mark_failed
+    tags: [service, ssh]
+    params:
+      check_mode: systemd
+      service_name: sshd
+
+  - id: svc_nginx
+    name: nginx service state
+    description: 1 = nginx running, 0 = nginx not running.
+    # Disable if nginx is not installed on this host
+    enabled: true
+    collector: service
+    key: host.service.nginx
+    value_type: int
+    unit: ""
+    delivery: immediate
+    importance: critical
+    timeout_seconds: 8
+    error_policy: fallback
+    fallback_value: "0"       # treat collector error the same as service down
+    tags: [service, web]
+    params:
+      check_mode: systemd
+      service_name: nginx
+
+  - id: svc_cron_process
+    name: cron process check
+    description: >
+      Process-pattern fallback for checking if cron is running.
+      Uses /proc scan — works without systemd.
+    enabled: true
+    collector: service
+    key: host.service.cron.process
+    value_type: int
+    unit: ""
+    delivery: immediate
+    importance: normal
+    timeout_seconds: 8
+    error_policy: skip
+    tags: [service, cron]
+    params:
+      check_mode: process
+      process_pattern: "cron"   # matches 'cron', 'crond', etc.
