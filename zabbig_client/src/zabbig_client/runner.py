@@ -55,6 +55,7 @@ async def run_all_collectors(
     semaphore = asyncio.Semaphore(config.runtime.max_concurrency)
 
     proc_root = config.runtime.proc_root
+    state_dir = config.state.directory
 
     async def run_one(metric: MetricDef) -> MetricResult:
         async with semaphore:
@@ -62,6 +63,11 @@ async def run_all_collectors(
             if "proc_root" not in metric.params:
                 metric = dataclasses.replace(
                     metric, params={**metric.params, "proc_root": proc_root}
+                )
+            # Inject state_dir for log collector from client.yaml state.directory.
+            if metric.collector == "log" and "state_dir" not in metric.params:
+                metric = dataclasses.replace(
+                    metric, params={**metric.params, "state_dir": state_dir}
                 )
             collector_cls = get_collector(metric.collector)
             collector = collector_cls()

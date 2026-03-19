@@ -106,8 +106,9 @@ state:
   # Useful for tracking consecutive failures and last successful run time.
   enabled: true
 
-  # Directory where last_run.json is written.
-  # Must be writable by the cron user.
+  # Directory for state files. Must be writable by the cron user.
+  # Used by: last_run.json (client state) and the log collector
+  # (one log_<metric_id>.json per log metric, for offset tracking).
   directory: "state"
 
 # ---------------------------------------------------------------------------
