@@ -237,6 +237,97 @@
 #   proc_root  string  Optional. Overrides runtime.proc_root for this metric.
 #                      Default: runtime.proc_root (which defaults to "/proc").
 #
+# -----------------------------------------------------------------------------
+# PARAMS — log collector
+# -----------------------------------------------------------------------------
+# Monitors application log files for specific messages.
+# Memory-efficient: files are read line-by-line after seeking to the stored
+# offset — the full file is NEVER loaded into memory.
+#
+#   path          string   REQUIRED
+#                          Path to the log file. The basename (filename part)
+#                          may be a Python regex; the directory is always
+#                          treated as a literal path. The most recently
+#                          modified matching file is used.
+#                          Examples:
+#                            path: /var/log/myapp/app.log
+#                            path: /var/log/myapp/app-\d{8}\.log
+#
+#   match         string   REQUIRED
+#                          Python regex applied to every line. Only matching
+#                          lines are forwarded to condition evaluation or
+#                          counted. Use anchors (^) or keywords to narrow
+#                          the set as tightly as possible.
+#
+#   mode          string   condition | count    (default: condition)
+#
+#                          condition — Incremental scan from the last stored
+#                            byte offset to EOF. Evaluates `conditions` on
+#                            each matching line and returns one value per run.
+#                            The byte offset and inode are persisted between
+#                            runs (see `state_dir`). Rotation detection:
+#                            a new inode or a smaller file size resets the
+#                            offset to 0.
+#
+#                          count — Full-file scan (byte 0 → EOF) every run.
+#                            Counts all lines matching `match` and returns a
+#                            cumulative integer. The value grows monotonically
+#                            as the file grows; use a Zabbix "Delta per second"
+#                            preprocessing step for rate-of-change graphs.
+#                            No state file is written in this mode.
+#                            NOTE: cost scales with file size, not new content.
+#                            Avoid on files > ~100 MB with short intervals.
+#
+#   encoding      string   File character encoding.  Default: utf-8
+#
+#   result        string   (mode=condition only)
+#                          How to collapse values from multiple matching lines
+#                          found in one scan window into a single Zabbix value:
+#                            last  — value from the LAST  matching line (default)
+#                            first — value from the FIRST matching line
+#                            max   — numerically highest value across all matches
+#                            min   — numerically lowest  value across all matches
+#                          Non-numeric values are ignored for max/min; last is
+#                          used as fallback when no numeric values exist.
+#
+#   default_value any      (mode=condition only)
+#                          Value sent to Zabbix when no line matched `match`
+#                          in this scan window. Keeps the item from going stale.
+#                          Default: 0
+#
+#   conditions    list     (mode=condition only)
+#                          Ordered list of sub-conditions evaluated against
+#                          each line that already passed `match`. The FIRST
+#                          matching entry wins.
+#
+#                          Each entry supports one of three forms:
+#
+#                          Form 1 — regex match:
+#                            when:  <Python regex>
+#                            value: <literal value to return>
+#
+#                          Form 2 — numeric extract + comparison:
+#                            extract:   <Python regex with ONE capture group>
+#                            compare:   gt | lt | gte | lte | eq
+#                            threshold: <number>
+#                            value:     <literal value>  OR  "$1"
+#                          `extract` runs re.search on the line. The text
+#                          inside the capture group () is cast to float and
+#                          compared against `threshold`. Use value: "$1" to
+#                          return the captured number itself as the metric
+#                          value instead of a fixed constant.
+#
+#                          Form 3 — catch-all (place last):
+#                            value: <literal value>
+#                          No `when` or `extract` — matches any line that
+#                          passed `match` but no earlier condition.
+#
+#                          NOTE: `when` and `extract` are mutually exclusive.
+#
+#   state_dir     string   Directory where offset state files are written.
+#                          One file per metric: state/log_<metric_id>.json
+#                          Default: "state"  (relative to working directory)
+#
 # =============================================================================
 
 version: 1
@@ -270,6 +361,9 @@ collector_defaults:
     delivery: immediate     # service state changes are sent immediately
   network:
     timeout_seconds: 10
+    delivery: batch
+  log:
+    timeout_seconds: 60
     delivery: batch
 
 # ---------------------------------------------------------------------------
@@ -836,3 +930,95 @@ metrics:
     params:
       interface: eth0
       mode: tx_bytes_per_sec
+
+  # ---- Log ---------------------------------------------------------------
+
+  - id: log_app_severity
+    name: Application log severity
+    description: >
+      Worst log severity seen in the application log during the last scan
+      window. 0=OK (no match), 1=WARN, 2=ERROR, 3=FATAL/OOM.
+      Incremental scan — only new lines since the last run are read.
+    enabled: false
+    collector: log
+    key: "app.log.severity"
+    value_type: int
+    unit: ""
+    delivery: immediate
+    importance: high
+    timeout_seconds: 30
+    error_policy: skip
+    tags: [app, log]
+    params:
+      path: "/var/log/myapp/app.log"
+      match: "WARN|ERROR|FATAL|OutOfMemory"
+      mode: condition
+      result: max
+      default_value: 0
+      conditions:
+        - when: "FATAL|OutOfMemory"
+          value: 3
+        - when: "ERROR"
+          value: 2
+        - when: "WARN"
+          value: 1
+        - value: 0             # matched `match` but no sub-condition
+
+  - id: log_api_response_time_max
+    name: API max response time (log)
+    description: >
+      Slowest API response time (ms) seen in the log during the last scan
+      window, extracted from lines like:
+        [INFO] POST /api/v1/payment response_time=1234ms status=200
+      Returns 0 when no response_time lines were found in this window.
+    enabled: false
+    collector: log
+    key: "app.log.api.response_time_max_ms"
+    value_type: float
+    unit: "ms"
+    delivery: batch
+    importance: normal
+    timeout_seconds: 30
+    error_policy: skip
+    tags: [app, log, api]
+    params:
+      path: "/var/log/myapp/access.log"
+      match: "response_time="
+      mode: condition
+      result: max
+      default_value: 0
+      conditions:
+        # Slow: > 2000 ms — return the actual measured value
+        - extract: "response_time=(\\d+(?:\\.\\d+)?)"
+          compare: gt
+          threshold: 2000
+          value: "$1"
+        # Moderate: > 500 ms
+        - extract: "response_time=(\\d+(?:\\.\\d+)?)"
+          compare: gt
+          threshold: 500
+          value: "$1"
+        # Fast path: return 0 for anything under 500 ms
+        - value: 0
+
+  - id: log_payment_api_calls_total
+    name: Payment API calls total (log)
+    description: >
+      Cumulative count of POST /api/v1/payment calls since the log file was
+      created. Grows monotonically; use Zabbix Change/Delta preprocessing
+      to derive the per-interval call rate.
+      Uses count mode — full-file scan every run.
+    enabled: false
+    collector: log
+    key: "app.log.payment.calls.total"
+    value_type: int
+    unit: "calls"
+    delivery: batch
+    importance: low
+    timeout_seconds: 60
+    error_policy: skip
+    tags: [app, log, api]
+    params:
+      path: "/var/log/myapp/access.log"
+      match: "POST /api/v1/payment"
+      mode: count

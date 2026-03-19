@@ -170,13 +170,21 @@ def _tags_to_zabbix(tags: list) -> list[dict]:
     return result
 
 
-def load_metrics_config(path: str) -> list[dict]:
-    """Return item defs (key, value_type, name, description, tags) for each enabled metric."""
+def load_metrics_config(path: str, only_enabled: bool = False) -> list[dict]:
+    """
+    Return item defs (key, value_type, name, description, tags) for provisioning.
+
+    By default ALL defined metrics are returned so that Zabbix items are created
+    for every metric — whether currently enabled for collection or not.  This
+    ensures the item already exists in Zabbix when you later enable collection.
+
+    Pass only_enabled=True to skip metrics with enabled: false (legacy behaviour).
+    """
     with open(path, "r", encoding="utf-8") as fh:
         data = yaml.safe_load(fh) or {}
     result = []
     for m in data.get("metrics", []):
-        if m.get("enabled", True) is False:
+        if only_enabled and m.get("enabled", True) is False:
             continue
         key = m.get("key")
         if not key:
@@ -433,6 +441,15 @@ def _parse_args(default_api_url: str) -> argparse.Namespace:
         action="store_true",
         help="Skip waiting for the Zabbix web UI to become available.",
     )
+    parser.add_argument(
+        "--only-enabled",
+        action="store_true",
+        help=(
+            "Only provision metrics that have enabled: true in metrics.yaml. "
+            "By default all defined metrics are provisioned so that Zabbix items "
+            "exist ready to receive data when a metric is later enabled."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -458,10 +475,15 @@ def main() -> int:
         or f"http://{zbx.server_host}:8080/api_jsonrpc.php"
     )
 
-    metric_items = load_metrics_config(args.metrics)
+    metric_items = load_metrics_config(args.metrics, only_enabled=args.only_enabled)
 
     log.info("Config file   : %s", args.config)
-    log.info("Metrics file  : %s (%d enabled items)", args.metrics, len(metric_items))
+    log.info(
+        "Metrics file  : %s (%d items%s)",
+        args.metrics,
+        len(metric_items),
+        ", enabled only" if args.only_enabled else ", all defined",
+    )
     log.info("Target host   : %s", zbx.host_name)
     log.info("Host group    : %s", zbx.host_group)
     log.info("API URL       : %s", api_url)
