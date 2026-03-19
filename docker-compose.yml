@@ -7,7 +7,6 @@
 #   zabbix-web     – Zabbix web frontend (nginx + PHP-FPM)
 #
 # Usage:
-#   cp .env.example .env
 #   docker compose up -d
 # =============================================================================
 

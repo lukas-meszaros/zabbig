@@ -1,5 +1,0 @@
-# Runtime: no external dependencies (stdlib only)
-# Dev/test dependencies
-pytest>=7.4,<9
-pytest-cov>=4.1,<6
-ruff>=0.4,<1
