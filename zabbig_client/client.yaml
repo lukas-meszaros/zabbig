@@ -41,7 +41,8 @@ runtime:
   max_concurrency: 8
 
   # PID lock file path — prevents overlapping cron executions.
-  lock_file: "/tmp/zabbig_client.lock"
+  # Kept in the state directory so all runtime files are in one place.
+  lock_file: "state/zabbig_client.lock"
 
   # dry_run: collect metrics but do not send to Zabbix.
   # Useful for testing configs and verifying collectors work.
@@ -54,7 +55,7 @@ runtime:
   # Root path of the Linux proc filesystem.
   # Default is /proc (correct for any native Linux host).
   # Override this when monitoring a Linux system remotely or via a bind-mount:
-  #   - Docker container proc mounted on macOS:  proc_root: "/host/proc"
+  #   - Container with host /proc bind-mounted:  proc_root: "/host/proc"
   #   - Mounted from a remote NFS/SSH mount:     proc_root: "/mnt/remote/proc"
   # Affects: cpu, memory, and service (process check) collectors.
   # Individual metrics can also set params.proc_root to override this value.

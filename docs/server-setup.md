@@ -18,7 +18,7 @@ All three containers share a Docker bridge network named `zabbix-lab-net`.
 
 ## Prerequisites
 
-- Docker Desktop ≥ 4.x running on macOS
+- Docker ≥ 24.x (or Docker Desktop)
 
 No other tools are required on the host — everything runs inside Docker.
 

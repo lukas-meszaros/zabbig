@@ -1,6 +1,6 @@
 # zabbig — Zabbix Local Lab
 
-A fully containerized Zabbix monitoring lab running on macOS via Docker Desktop, with a Python metrics client (`zabbig_client`) that collects host metrics and sends them to Zabbix via the trapper protocol.
+A fully containerized Zabbix monitoring lab running via Docker, with a Python metrics client (`zabbig_client`) that collects host metrics and sends them to Zabbix via the trapper protocol.
 
 **Purpose:** Local development playground / learning environment. Not intended for production use.
 
@@ -27,7 +27,7 @@ Trapper port: `10051`
 
 ### zabbig-client container (`docker-compose.client.yml`)
 
-A Linux Docker container with `zabbig_client/` bind-mounted at `/app`. Provides a working Linux environment for the metrics client — CPU, memory, service, and network collectors all read from the real Linux `/proc` inside Docker, even on macOS.
+A Linux Docker container with `zabbig_client/` bind-mounted at `/app`. Provides a consistent Linux environment for the metrics client — CPU, memory, service, and network collectors all read from the real Linux `/proc` inside Docker.
 
 → Full setup guide: [docs/client-setup.md](docs/client-setup.md)
 
@@ -44,11 +44,11 @@ The metrics collection application. Collects CPU, memory, disk, network, service
 ## Architecture
 
 ```
-macOS host
+host
 │
 │  browser  ────────────────────HTTP:8080──► Zabbix web UI
 │
-└── Docker Desktop  (network: zabbix-lab-net)
+└── Docker  (network: zabbix-lab-net)
     │
     ├── zabbix-postgres
     ├── zabbix-server  ◄── TCP:10051

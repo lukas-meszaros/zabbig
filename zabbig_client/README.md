@@ -116,7 +116,7 @@ python3 run.py
 
 ## Lock File Behaviour
 
-`run.py` creates a PID lock file (default: `/tmp/zabbig_client.lock`) when it starts and removes it on exit. If a lock exists with a PID that is still running, the new instance exits immediately with code 2. Stale locks (PID no longer running) are cleared automatically. The path is configurable via `runtime.lock_file` in `client.yaml`.
+`run.py` creates a PID lock file (default: `state/zabbig_client.lock`) when it starts and removes it on exit. If a lock exists with a PID that is still running, the new instance exits immediately with code 2. Stale locks (PID no longer running) are cleared automatically. The path is configurable via `runtime.lock_file` in `client.yaml`.
 
 ---
 

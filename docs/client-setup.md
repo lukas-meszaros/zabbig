@@ -1,6 +1,6 @@
 # Docker Client Container — Setup Guide
 
-The `zabbig-client` container provides a Linux environment with the `zabbig_client` directory bind-mounted at `/app`. All collectors (CPU, memory, service, network) read from the real Linux kernel `/proc` inside Docker, so they work correctly even when the project is cloned on macOS.
+The `zabbig-client` container provides a Linux environment with the `zabbig_client` directory bind-mounted at `/app`. All collectors (CPU, memory, service, network) read from the real Linux kernel `/proc` inside Docker.
 
 ---
 
@@ -67,7 +67,7 @@ Two config variants are provided:
 | File | Used for |
 |---|---|
 | `client.docker.yaml` | Runs **inside** the container — uses Docker DNS name `zabbix-server` |
-| `client.yaml` | Runs **on the macOS host** — uses `127.0.0.1` |
+| `client.yaml` | Runs **directly on the host** — uses `127.0.0.1` |
 
 See [configuration.md](configuration.md) for a full reference of all config fields.
 

@@ -1,7 +1,7 @@
 """
 disk.py — Disk/filesystem metrics collector.
 
-Uses os.statvfs() — works on Linux and macOS.
+Uses os.statvfs().
 params:
   mount  — filesystem path to inspect (e.g. "/", "/data")
   mode   — "used_percent"        | "used_bytes"         | "free_bytes"

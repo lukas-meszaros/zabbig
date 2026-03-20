@@ -50,7 +50,7 @@ class ZabbixConfig:
 class RuntimeConfig:
     overall_timeout_seconds: float = 240.0
     max_concurrency: int = 8
-    lock_file: str = "/tmp/zabbig_client.lock"
+    lock_file: str = "state/zabbig_client.lock"
     dry_run: bool = False
     fail_fast: bool = False
     proc_root: str = "/proc"

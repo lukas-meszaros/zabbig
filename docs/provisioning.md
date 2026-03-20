@@ -33,7 +33,7 @@
 docker exec zabbig-client python3 provision_zabbix.py --config client.docker.yaml
 ```
 
-### From the macOS host
+### From the host
 
 ```bash
 cd zabbig_client

@@ -69,7 +69,7 @@ class TestMemoryHelpers(unittest.TestCase):
 
 
 class TestDiskHelpers(unittest.TestCase):
-    """os.statvfs works on both Linux and macOS."""
+    """os.statvfs disk metrics."""
 
     def test_root_used_percent(self):
         from zabbig_client.collectors.disk import _disk_stat

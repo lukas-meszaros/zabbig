@@ -87,11 +87,11 @@ runtime:
 
 #### `lock_file`
 
-PID lock file path. Created at run start, removed at run end. Prevents overlapping cron executions.
+PID lock file path. Created at run start, removed at run end. Prevents overlapping cron executions. Kept in the state directory by default so all runtime files are in one place.
 
 ```yaml
 runtime:
-  lock_file: "/tmp/zabbig_client.lock"    # default
+  lock_file: "state/zabbig_client.lock"    # default
 ```
 
 #### `dry_run`

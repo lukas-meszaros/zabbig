@@ -1,6 +1,6 @@
 # Disk Collector
 
-Reports filesystem space and inode usage via `os.statvfs()`. Works on both Linux and macOS.
+Reports filesystem space and inode usage via `os.statvfs()`.
 
 ---
 
