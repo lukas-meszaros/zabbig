@@ -37,6 +37,7 @@ Override with --api-url or ZABBIX_API_URL env var.
 """
 
 import argparse
+import getpass
 import logging
 import os
 import re
@@ -82,19 +83,11 @@ logging.basicConfig(
 log = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-# Load .env from the repo root (optional — graceful no-op when absent)
-# ---------------------------------------------------------------------------
-try:
-    from dotenv import load_dotenv  # type: ignore[import]
-    load_dotenv(os.path.join(_HERE, "..", ".env"))
-except ImportError:
-    pass  # python-dotenv is optional
-
-# ---------------------------------------------------------------------------
 # Credential defaults from env (API-only, not stored in client.yaml)
+# None means "not set" — main() will prompt interactively if still None.
 # ---------------------------------------------------------------------------
-_DEFAULT_USER = os.getenv("ZABBIX_ADMIN_USER", "Admin")
-_DEFAULT_PASSWORD = os.getenv("ZABBIX_ADMIN_PASSWORD", "zabbix")
+_ENV_USER = os.getenv("ZABBIX_ADMIN_USER")
+_ENV_PASSWORD = os.getenv("ZABBIX_ADMIN_PASSWORD")
 
 # ---------------------------------------------------------------------------
 # Zabbix value_type constants
@@ -426,15 +419,15 @@ def _parse_args(default_api_url: str) -> argparse.Namespace:
     )
     parser.add_argument(
         "--user",
-        default=_DEFAULT_USER,
+        default=None,
         metavar="USER",
-        help=f"Zabbix admin username (default: {_DEFAULT_USER})",
+        help="Zabbix admin username (env: ZABBIX_ADMIN_USER, default: Admin; prompted if not set)",
     )
     parser.add_argument(
         "--password",
-        default=_DEFAULT_PASSWORD,
+        default=None,
         metavar="PASS",
-        help="Zabbix admin password (env: ZABBIX_ADMIN_PASSWORD)",
+        help="Zabbix admin password (env: ZABBIX_ADMIN_PASSWORD; prompted if not set)",
     )
     parser.add_argument(
         "--no-wait",
@@ -488,12 +481,20 @@ def main() -> int:
     log.info("Host group    : %s", zbx.host_group)
     log.info("API URL       : %s", api_url)
 
+    # Resolve credentials: CLI arg > env var > interactive prompt
+    user = args.user or _ENV_USER
+    password = args.password or _ENV_PASSWORD
+    if not user:
+        user = input("Zabbix admin username [Admin]: ").strip() or "Admin"
+    if not password:
+        password = getpass.getpass("Zabbix admin password: ")
+
     if not args.no_wait:
         _wait_for_api(api_url)
 
     api = ZabbixAPI(api_url)
     try:
-        api.login(args.user, args.password)
+        api.login(user, password)
         provision(api, zbx.host_name, zbx.host_group, metric_items)
     except RuntimeError as exc:
         log.error("%s", exc)
