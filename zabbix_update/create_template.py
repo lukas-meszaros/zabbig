@@ -32,6 +32,7 @@ from _common import (
     load_metrics,
     resolve_api_url,
     resolve_credentials,
+    server_host_from_config,
     wait_for_api,
     log,
 )
@@ -166,10 +167,10 @@ def _parse_args():
         help=f"Path to metrics.yaml (default: {_DEFAULT_METRICS_YAML})",
     )
     parser.add_argument(
-        "--server-host",
-        default="127.0.0.1",
-        metavar="HOST",
-        help="Zabbix server host for deriving the API URL (default: 127.0.0.1).",
+        "--config",
+        default=_DEFAULT_CLIENT_YAML,
+        metavar="PATH",
+        help=f"Path to client.yaml — server_host is read from it (default: {_DEFAULT_CLIENT_YAML})",
     )
     parser.add_argument(
         "--only-enabled",
@@ -190,7 +191,8 @@ def main() -> int:
     tpl_data = load_yaml(args.template)
     metrics  = load_metrics(args.metrics, only_enabled=args.only_enabled)
 
-    api_url = resolve_api_url(args.api_url, args.server_host)
+    server_host = server_host_from_config(args.config)
+    api_url = resolve_api_url(args.api_url, server_host)
     log.info("API URL  : %s", api_url)
     log.info("Metrics  : %d items (%s)", len(metrics),
              "enabled only" if args.only_enabled else "all defined")

@@ -37,12 +37,14 @@ from _common import (
     load_yaml,
     resolve_api_url,
     resolve_credentials,
+    server_host_from_config,
     wait_for_api,
     log,
 )
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 _DEFAULT_TRIGGERS_YAML = os.path.join(_HERE, "triggers.yaml")
+_DEFAULT_CLIENT_YAML   = os.path.join(_HERE, "..", "zabbig_client", "client.yaml")
 
 
 # ---------------------------------------------------------------------------
@@ -186,10 +188,10 @@ def _parse_args():
         help="Zabbix host name (required when --target host).",
     )
     parser.add_argument(
-        "--server-host",
-        default="127.0.0.1",
-        metavar="HOST",
-        help="Zabbix server host for deriving the API URL (default: 127.0.0.1).",
+        "--config",
+        default=_DEFAULT_CLIENT_YAML,
+        metavar="PATH",
+        help=f"Path to client.yaml — server_host is read from it (default: {_DEFAULT_CLIENT_YAML})",
     )
     return parser.parse_args()
 
@@ -205,8 +207,9 @@ def main() -> int:
         log.error("triggers.yaml not found: %s", args.triggers)
         return 1
 
-    trig_data = load_yaml(args.triggers)
-    api_url   = resolve_api_url(args.api_url, args.server_host)
+    trig_data   = load_yaml(args.triggers)
+    server_host = server_host_from_config(args.config)
+    api_url     = resolve_api_url(args.api_url, server_host)
 
     log.info("API URL  : %s", api_url)
     log.info("Target   : %s", args.target)

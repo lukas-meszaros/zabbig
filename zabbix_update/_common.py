@@ -68,6 +68,15 @@ def load_yaml(path: str) -> dict:
         return yaml.safe_load(fh) or {}
 
 
+def server_host_from_config(config_path: str) -> str:
+    """Read zabbix.server_host from client.yaml (plain YAML, no validation)."""
+    try:
+        data = load_yaml(config_path)
+        return data.get("zabbix", {}).get("server_host", "127.0.0.1")
+    except Exception:
+        return "127.0.0.1"
+
+
 # ---------------------------------------------------------------------------
 # Zabbix value_type constants
 # ---------------------------------------------------------------------------

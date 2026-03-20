@@ -35,12 +35,14 @@ from _common import (
     load_yaml,
     resolve_api_url,
     resolve_credentials,
+    server_host_from_config,
     wait_for_api,
     log,
 )
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 _DEFAULT_DASHBOARD_YAML = os.path.join(_HERE, "dashboard.yaml")
+_DEFAULT_CLIENT_YAML    = os.path.join(_HERE, "..", "zabbig_client", "client.yaml")
 
 _GRID_WIDTH = 24
 
@@ -269,15 +271,17 @@ def _parse_args():
     )
     parser.add_argument(
         "--host",
-        required=True,
+        default=None,
         metavar="HOSTNAME",
-        help="Zabbix host name for which to build the dashboard.",
+        help="Zabbix host name for which to build the dashboard. "
+             "Defaults to zabbix.host_name from client.yaml.",
     )
     parser.add_argument(
-        "--server-host",
-        default="127.0.0.1",
-        metavar="HOST",
-        help="Zabbix server host for deriving the API URL (default: 127.0.0.1).",
+        "--config",
+        default=_DEFAULT_CLIENT_YAML,
+        metavar="PATH",
+        help=f"Path to client.yaml — server_host and host_name are read from it "
+             f"(default: {_DEFAULT_CLIENT_YAML})",
     )
     return parser.parse_args()
 
@@ -289,11 +293,20 @@ def main() -> int:
         log.error("dashboard.yaml not found: %s", args.dashboard)
         return 1
 
+    client_cfg  = load_yaml(args.config)
+    zabbix_cfg  = client_cfg.get("zabbix", {})
+    server_host = zabbix_cfg.get("server_host", "127.0.0.1")
+    host_name   = args.host or zabbix_cfg.get("host_name") or ""
+
+    if not host_name:
+        log.error("Host name not specified. Use --host or set zabbix.host_name in client.yaml.")
+        return 1
+
     dash_data = load_yaml(args.dashboard)
-    api_url   = resolve_api_url(args.api_url, args.server_host)
+    api_url   = resolve_api_url(args.api_url, server_host)
 
     log.info("API URL  : %s", api_url)
-    log.info("Host     : %s", args.host)
+    log.info("Host     : %s", host_name)
 
     if not args.no_wait:
         wait_for_api(api_url)
@@ -303,7 +316,7 @@ def main() -> int:
     api = ZabbixAPI(api_url)
     try:
         api.login(user, password)
-        run(api, dash_data, args.host)
+        run(api, dash_data, host_name)
     except RuntimeError as exc:
         log.error("%s", exc)
         return 1
