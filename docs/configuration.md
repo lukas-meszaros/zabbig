@@ -316,7 +316,7 @@ id: log_app_error
 
 #### `collector`
 
-Which built-in collector handles this metric. Valid values: `cpu`, `memory`, `disk`, `service`, `network`, `log`.
+Which built-in collector handles this metric. Valid values: `cpu`, `memory`, `disk`, `service`, `network`, `log`, `probe`.
 
 #### `key`
 
@@ -371,6 +371,7 @@ What to do when a collector fails or times out:
 | `service` | 8 | immediate |
 | `network` | 10 | batch |
 | `log` | 60 | batch |
+| `probe` | 10 | immediate |
 
 ---
 
@@ -384,3 +385,4 @@ Each collector has its own `params` block. See the individual collector document
 - [Service collector](collector-service.md)
 - [Network collector](collector-network.md)
 - [Log collector](collector-log.md)
+- [Probe collector](collector-probe.md)

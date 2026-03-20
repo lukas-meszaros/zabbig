@@ -193,3 +193,59 @@ triggers:
     expression: "nodata(/zabbig Linux Host/zabbig.client.run.success,15m)=1"
     severity: average
     description: "No data received from zabbig_client in the last 15 minutes. Client may have stopped or crashed."
+
+  # ---- Probe --------------------------------------------------------------
+
+  - key: probe.google.dns
+    name: "Google DNS unreachable from {HOST.NAME}"
+    expression: "last(/zabbig Linux Host/probe.google.dns)=0"
+    severity: warning
+    description: "TCP port 53 on 8.8.8.8 is not reachable. May indicate a network outage or DNS filtering."
+
+  - key: probe.github.https.port
+    name: "GitHub HTTPS port unreachable from {HOST.NAME}"
+    expression: "last(/zabbig Linux Host/probe.github.https.port)=0"
+    severity: warning
+    description: "TCP port 443 on github.com is not reachable. Outbound HTTPS traffic may be blocked."
+
+  - key: probe.github.api.up
+    name: "GitHub API not returning 2xx from {HOST.NAME}"
+    expression: "last(/zabbig Linux Host/probe.github.api.up)<>1"
+    severity: warning
+    description: "GitHub REST API at api.github.com is not returning a 2xx status code."
+
+  - key: probe.github.api.up.response_time_ms
+    name: "GitHub API slow response from {HOST.NAME}"
+    expression: "last(/zabbig Linux Host/probe.github.api.up.response_time_ms)>3000"
+    severity: warning
+    description: "HTTP response time to api.github.com exceeded 3000 ms."
+    depends_on:
+      - "GitHub API not returning 2xx from {HOST.NAME}"
+
+  - key: probe.github.api.up.ssl_check
+    name: "GitHub API SSL certificate invalid on {HOST.NAME}"
+    expression: "last(/zabbig Linux Host/probe.github.api.up.ssl_check)=0"
+    severity: average
+    description: "TLS certificate for api.github.com is invalid (expired, hostname mismatch, or untrusted CA)."
+
+  - key: probe.github.api.up.ssl_check
+    name: "GitHub API SSL certificate unknown on {HOST.NAME}"
+    expression: "last(/zabbig Linux Host/probe.github.api.up.ssl_check)=2"
+    severity: warning
+    description: "Could not verify TLS certificate for api.github.com. Host may be unreachable or using an unexpected TLS version."
+    depends_on:
+      - "GitHub API SSL certificate invalid on {HOST.NAME}"
+
+  - key: probe.github.api.body
+    name: "GitHub API body check failed on {HOST.NAME}"
+    expression: "last(/zabbig Linux Host/probe.github.api.body)=0"
+    severity: average
+    description: "GitHub REST API response body does not contain expected JSON key. API may be returning an error page."
+
+  - key: probe.github.api.body.ssl_check
+    name: "GitHub API body probe SSL cert invalid on {HOST.NAME}"
+    expression: "last(/zabbig Linux Host/probe.github.api.body.ssl_check)=0"
+    severity: average
+    description: "TLS certificate for api.github.com is invalid (detected by body probe)."
+    depends_on:
+      - "GitHub API SSL certificate invalid on {HOST.NAME}"

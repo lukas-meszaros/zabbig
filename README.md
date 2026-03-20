@@ -35,7 +35,7 @@ A Linux Docker container with `zabbig_client/` bind-mounted at `/app`. Provides 
 
 ### zabbig_client app
 
-The metrics collection application. Collects CPU, memory, disk, network, service, and log metrics on a schedule and pushes them to Zabbix via the trapper protocol.
+The metrics collection application. Collects CPU, memory, disk, network, service, log, and probe (TCP/HTTP endpoint) metrics on a schedule and pushes them to Zabbix via the trapper protocol.
 
 → App overview and quick start: [zabbig_client/README.md](zabbig_client/README.md)
 
@@ -97,6 +97,7 @@ docker exec zabbig-client python3 run.py --config client.docker.yaml
 | [docs/collector-service.md](docs/collector-service.md) | Service collector — systemd and process modes |
 | [docs/collector-network.md](docs/collector-network.md) | Network collector — throughput, errors, sockets |
 | [docs/collector-log.md](docs/collector-log.md) | Log collector — condition and count modes, all params |
+| [docs/collector-probe.md](docs/collector-probe.md) | Probe collector — TCP/HTTP active endpoint checks |
 | [docs/adding-metrics.md](docs/adding-metrics.md) | How to add a new metric or a new collector |
 
 ---

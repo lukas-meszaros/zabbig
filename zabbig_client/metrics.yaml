@@ -944,9 +944,6 @@ metrics:
       mode: count
 
   # ---- Probes ------------------------------------------------------------
-  # Each probe below requires a matching Trapper item in Zabbix.
-  # Sub-key items (.response_time_ms, .ssl_check) need their own Trapper items.
-  # All probes use delivery: immediate (from collector_defaults.probe).
 
   # --- TCP probes ---
 

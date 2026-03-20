@@ -6,7 +6,7 @@ A self-contained Python monitoring client that collects host metrics and service
 
 ## What It Does
 
-- Collects CPU, memory, disk, network, service, and application log metrics
+- Collects CPU, memory, disk, network, service, application log, and probe (TCP/HTTP endpoint) metrics
 - Pushes values to Zabbix using the bundled `zabbix_utils` library (trapper protocol)
 - Runs safely from cron — PID lock prevents overlapping executions
 - Requires **zero pip/apt/yum install** — all dependencies are vendored in `src/`
@@ -23,6 +23,7 @@ A self-contained Python monitoring client that collects host metrics and service
 | `service` | Running state via systemd or /proc cmdline scan | [collector-service.md](../docs/collector-service.md) |
 | `network` | Throughput, errors, drops, TCP/UDP socket counts | [collector-network.md](../docs/collector-network.md) |
 | `log` | Log file scanning — event detection, severity, counts | [collector-log.md](../docs/collector-log.md) |
+| `probe` | Active TCP/HTTP endpoint checks — reachability, status, SSL | [collector-probe.md](../docs/collector-probe.md) |
 
 ---
 
@@ -46,7 +47,7 @@ zabbig_client/
       locking.py                  # cron-safe PID file lock
       logging_setup.py            # configures Python logging
       state_manager.py            # optional run-state persistence (JSON)
-      collectors/                 # cpu, memory, disk, service, network, log
+      collectors/                 # cpu, memory, disk, service, network, log, probe
 
     zabbix_utils/                 # vendored official Zabbix Python library
     yaml/                         # vendored PyYAML pure-Python source
@@ -132,6 +133,7 @@ python3 run.py
 | [collector-service.md](../docs/collector-service.md) | Service collector modes and scenarios |
 | [collector-network.md](../docs/collector-network.md) | Network collector modes and scenarios |
 | [collector-log.md](../docs/collector-log.md) | Log collector modes, conditions, and scenarios |
+| [collector-probe.md](../docs/collector-probe.md) | Probe collector — TCP/HTTP active endpoint checks |
 | [adding-metrics.md](../docs/adding-metrics.md) | How to add a new metric or a new collector |
 | [server-setup.md](../docs/server-setup.md) | Docker Zabbix server stack setup |
 | [client-setup.md](../docs/client-setup.md) | Docker client container setup |

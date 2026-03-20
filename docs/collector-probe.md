@@ -302,24 +302,3 @@ The `match: '"status"'` guard skips lines that don't mention `status`. The
 `conditions` list maps the JSON field value to a severity integer. `result: max`
 ensures the worst severity is reported when the body contains multiple status
 references.
-
----
-
-## Zabbix Item Setup
-
-Each probe metric key (and each sub-key) must have a matching **Trapper** item
-in Zabbix. Suggested item types:
-
-| Key suffix | Zabbix type | Units |
-|---|---|---|
-| `probe.<name>` (tcp) | Numeric (unsigned) | — |
-| `probe.<name>` (http_status raw) | Numeric (unsigned) | — |
-| `probe.<name>` (condition-mapped) | Numeric (unsigned) | — |
-| `<key>.response_time_ms` | Numeric (unsigned) | ms |
-| `<key>.ssl_check` | Numeric (unsigned) | — |
-
-For trigger expressions, useful patterns:
-- Port down: `last(/host/probe.db.port.open)=0`
-- High latency: `last(/host/probe.api.up.response_time_ms)>2000`
-- Invalid cert: `last(/host/probe.api.up.ssl_check)=0`
-- Cert unknown: `last(/host/probe.api.up.ssl_check)=2`

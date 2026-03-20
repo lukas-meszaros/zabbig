@@ -30,6 +30,7 @@ See [configuration.md](configuration.md) for all common fields, and the individu
 - [Service](collector-service.md) — `check_mode`, `service_name`, `process_pattern`, `proc_root`
 - [Network](collector-network.md) — `interface`, `mode`, `proc_root`
 - [Log](collector-log.md) — `path`, `match`, `mode`, `conditions`, `result`, `default_value`
+- [Probe](collector-probe.md) — `host`, `port`, `mode`, `timeout_seconds`, `conditions`, `result`
 
 ### 2. Verify with a dry-run
 
@@ -111,7 +112,7 @@ Key points:
 Open `src/zabbig_client/models.py` and add the new name to `VALID_COLLECTORS`:
 
 ```python
-VALID_COLLECTORS = {"cpu", "memory", "disk", "service", "network", "log", "my_collector"}
+VALID_COLLECTORS = {"cpu", "memory", "disk", "service", "network", "log", "probe", "my_collector"}
 ```
 
 ### 3. Import the module in `collector_registry.py`

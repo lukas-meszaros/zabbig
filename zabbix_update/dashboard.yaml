@@ -223,3 +223,62 @@ pages:
         title: "Server Time"
         width: 6
         height: 3
+
+  # --------------------------------------------------------------------------
+  - name: "Probes"
+    widgets:
+
+      - type: problems
+        title: "Probe Problems"
+        width: 24
+        height: 4
+
+      - type: plain_value
+        title: "Google DNS (8.8.8.8:53)"
+        keys:
+          - probe.google.dns
+        width: 6
+        height: 3
+
+      - type: plain_value
+        title: "GitHub HTTPS Port"
+        keys:
+          - probe.github.https.port
+        width: 6
+        height: 3
+
+      - type: plain_value
+        title: "GitHub API Status"
+        keys:
+          - probe.github.api.up
+        width: 6
+        height: 3
+
+      - type: plain_value
+        title: "GitHub API Body Check"
+        keys:
+          - probe.github.api.body
+        width: 6
+        height: 3
+
+      - type: plain_value
+        title: "GitHub API SSL Cert"
+        keys:
+          - probe.github.api.up.ssl_check
+        width: 6
+        height: 3
+
+      - type: plain_value
+        title: "GitHub API Body SSL Cert"
+        keys:
+          - probe.github.api.body.ssl_check
+        width: 6
+        height: 3
+
+      - type: graph
+        title: "Probe Response Times (ms)"
+        keys:
+          - probe.google.dns.response_time_ms
+          - probe.github.api.up.response_time_ms
+        width: 24
+        height: 5

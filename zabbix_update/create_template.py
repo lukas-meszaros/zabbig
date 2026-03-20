@@ -107,6 +107,30 @@ def _build_self_mon_defs(tpl_data: dict) -> list[dict]:
     return result
 
 
+def _build_additional_item_defs(tpl_data: dict) -> list[dict]:
+    """Build item defs for additional_items in template.yaml (e.g. probe sub-keys)."""
+    defaults   = tpl_data.get("item_defaults", {})
+    def_history = defaults.get("history", "7d")
+    def_trends  = defaults.get("trends", "365d")
+    def_tags    = defaults.get("tags", [])
+    result = []
+    for ai in tpl_data.get("additional_items", []):
+        vt_int = YAML_VT_MAP.get(str(ai.get("value_type", "int")).lower(), VT_FLOAT)
+        item_def: dict = {
+            "key_":        ai["key"],
+            "name":        ai.get("name", ai["key"]),
+            "description": ai.get("description", ""),
+            "value_type":  vt_int,
+            "history":     ai.get("history", def_history),
+            "trends":      ai.get("trends", def_trends),
+        }
+        tags = ai.get("tags", def_tags)
+        if tags:
+            item_def["tags"] = tags
+        result.append(item_def)
+    return result
+
+
 # ---------------------------------------------------------------------------
 # Main provisioning flow
 # ---------------------------------------------------------------------------
@@ -139,6 +163,13 @@ def run(api: ZabbixAPI, tpl_data: dict, metrics: list[dict]) -> None:
     log.info("--- Self-monitoring items (%d) ---", len(sm_defs))
     for item_def in sm_defs:
         api.ensure_item(tpl_id, item_def, on_template=True)
+
+    # Additional items (probe sub-keys etc.)
+    add_defs = _build_additional_item_defs(tpl_data)
+    if add_defs:
+        log.info("--- Additional items (%d) ---", len(add_defs))
+        for item_def in add_defs:
+            api.ensure_item(tpl_id, item_def, on_template=True)
 
     log.info("=" * 60)
     log.info("Done. Template '%s' is ready.", tpl_name)

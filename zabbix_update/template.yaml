@@ -427,3 +427,134 @@ items:
         value: "zabbig"
       - tag: "component"
         value: "log"
+
+  # ---- Probe --------------------------------------------------------------
+
+  - key: probe.google.dns
+    name: "Probe: Google DNS (8.8.8.8:53)"
+    description: "1 = TCP port 53 on 8.8.8.8 is reachable, 0 = not reachable. Basic outbound connectivity indicator."
+    trends: "0"
+    tags:
+      - tag: "source"
+        value: "zabbig"
+      - tag: "component"
+        value: "probe"
+
+  - key: probe.github.https.port
+    name: "Probe: GitHub HTTPS port (github.com:443)"
+    description: "1 = TCP port 443 on github.com is reachable, 0 = not reachable."
+    trends: "0"
+    tags:
+      - tag: "source"
+        value: "zabbig"
+      - tag: "component"
+        value: "probe"
+
+  - key: probe.github.api.up
+    name: "Probe: GitHub API up (http_status)"
+    description: "1=2xx, 2=4xx, 3=5xx, 0=unreachable. Checks https://api.github.com status code."
+    trends: "0"
+    tags:
+      - tag: "source"
+        value: "zabbig"
+      - tag: "component"
+        value: "probe"
+
+  - key: probe.httpbin.status.200
+    name: "Probe: httpbin 200 check"
+    description: "1 = https://httpbin.org/status/200 returns 2xx, 0 = otherwise. Disabled by default."
+    trends: "0"
+    tags:
+      - tag: "source"
+        value: "zabbig"
+      - tag: "component"
+        value: "probe"
+
+  - key: probe.github.api.body
+    name: "Probe: GitHub API body check"
+    description: "1 = response body contains expected JSON key, 0 = otherwise. Checks https://api.github.com."
+    trends: "0"
+    tags:
+      - tag: "source"
+        value: "zabbig"
+      - tag: "component"
+        value: "probe"
+
+  - key: probe.httpbin.json.body
+    name: "Probe: httpbin JSON body check"
+    description: "1 = https://httpbin.org/json contains expected JSON structure. Disabled by default."
+    trends: "0"
+    tags:
+      - tag: "source"
+        value: "zabbig"
+      - tag: "component"
+        value: "probe"
+
+# ---------------------------------------------------------------------------
+# Additional items — items not derived from metrics.yaml (e.g. probe sub-keys).
+# These are sent by the collector as separate trapper payloads alongside the
+# primary metric.  Each entry below will be created as a Zabbix Trapper item.
+# ---------------------------------------------------------------------------
+additional_items:
+
+  # Sub-keys emitted by probe collector when response_time_ms: true
+  - key: probe.google.dns.response_time_ms
+    name: "Probe: Google DNS response time (ms)"
+    description: "TCP round-trip time to 8.8.8.8:53 in milliseconds. 0 when probe fails."
+    value_type: int
+    history: "7d"
+    trends: "365d"
+    tags:
+      - tag: "source"
+        value: "zabbig"
+      - tag: "component"
+        value: "probe"
+
+  - key: probe.github.api.up.response_time_ms
+    name: "Probe: GitHub API response time (ms)"
+    description: "HTTP round-trip time to api.github.com in milliseconds. 0 when probe fails."
+    value_type: int
+    history: "7d"
+    trends: "365d"
+    tags:
+      - tag: "source"
+        value: "zabbig"
+      - tag: "component"
+        value: "probe"
+
+  - key: probe.httpbin.json.body.response_time_ms
+    name: "Probe: httpbin JSON response time (ms)"
+    description: "HTTP round-trip time to httpbin.org/json in milliseconds. Disabled by default."
+    value_type: int
+    history: "7d"
+    trends: "365d"
+    tags:
+      - tag: "source"
+        value: "zabbig"
+      - tag: "component"
+        value: "probe"
+
+  # Sub-keys emitted by probe collector when ssl_check: true
+  - key: probe.github.api.up.ssl_check
+    name: "Probe: GitHub API SSL cert"
+    description: "SSL certificate validity for api.github.com. 1=valid, 0=invalid, 2=unknown."
+    value_type: int
+    history: "7d"
+    trends: "0"
+    tags:
+      - tag: "source"
+        value: "zabbig"
+      - tag: "component"
+        value: "probe"
+
+  - key: probe.github.api.body.ssl_check
+    name: "Probe: GitHub API body SSL cert"
+    description: "SSL certificate validity for api.github.com (body probe). 1=valid, 0=invalid, 2=unknown."
+    value_type: int
+    history: "7d"
+    trends: "0"
+    tags:
+      - tag: "source"
+        value: "zabbig"
+      - tag: "component"
+        value: "probe"
