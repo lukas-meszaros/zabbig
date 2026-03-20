@@ -1,0 +1,195 @@
+# =============================================================================
+# triggers.yaml — Zabbix trigger definitions for zabbig_client metrics
+#
+# Used by: create_triggers.py
+#
+# Each trigger entry references a Zabbix item by its key.  Triggers can be
+# created on a host or on a template — set the target in create_triggers.py.
+#
+# Fields per trigger:
+#   key          string  REQUIRED. The Zabbix item key this trigger monitors.
+#   name         string  REQUIRED. Trigger name shown in Zabbix. Use {HOST.NAME}
+#                        macro for dynamic names.
+#   expression   string  REQUIRED. Zabbix trigger expression using Zabbix 6.x
+#                        function syntax: func(/host_or_template/key,period)op threshold
+#                        For template triggers use the template name as the host part.
+#   severity     string  REQUIRED. not_classified | info | warning | average | high | disaster
+#   description  string  Optional. Shown in problem details.
+#   recovery_expression  string  Optional. Custom recovery expression.
+#                        If omitted, trigger recovers when expression is false.
+#   depends_on   list    Optional. List of trigger names this trigger depends on.
+#                        Problem suppressed while the dependency is active.
+#   enabled      bool    Optional. Default true. Set false to create trigger in disabled state.
+#
+# Template name used in expressions: "zabbig Linux Host"
+# For host-based triggers substitute the template name with the host name.
+# =============================================================================
+
+# Template name referenced in expressions
+template_name: "zabbig Linux Host"
+
+triggers:
+
+  # ---- CPU ----------------------------------------------------------------
+
+  - key: host.cpu.util
+    name: "High CPU utilisation on {HOST.NAME}"
+    expression: "min(/zabbig Linux Host/host.cpu.util,5m)>85"
+    severity: warning
+    description: "CPU utilisation has been above 85% for the last 5 minutes."
+
+  - key: host.cpu.util
+    name: "Critical CPU utilisation on {HOST.NAME}"
+    expression: "min(/zabbig Linux Host/host.cpu.util,5m)>95"
+    severity: high
+    description: "CPU utilisation has been above 95% for the last 5 minutes."
+    depends_on:
+      - "High CPU utilisation on {HOST.NAME}"
+
+  - key: host.cpu.load1
+    name: "High 1-min load average on {HOST.NAME}"
+    expression: "last(/zabbig Linux Host/host.cpu.load1)>10"
+    severity: warning
+    description: "1-minute load average exceeds 10. Adjust threshold to match server core count."
+
+  # ---- Memory -------------------------------------------------------------
+
+  - key: host.memory.used_percent
+    name: "High memory usage on {HOST.NAME}"
+    expression: "min(/zabbig Linux Host/host.memory.used_percent,5m)>85"
+    severity: warning
+    description: "Memory usage has been above 85% for the last 5 minutes."
+
+  - key: host.memory.used_percent
+    name: "Critical memory usage on {HOST.NAME}"
+    expression: "min(/zabbig Linux Host/host.memory.used_percent,5m)>95"
+    severity: high
+    description: "Memory usage has been above 95% for the last 5 minutes."
+    depends_on:
+      - "High memory usage on {HOST.NAME}"
+
+  - key: host.memory.swap_used_percent
+    name: "Swap in use on {HOST.NAME}"
+    expression: "min(/zabbig Linux Host/host.memory.swap_used_percent,5m)>20"
+    severity: warning
+    description: "Swap usage has been above 20% for the last 5 minutes."
+
+  # ---- Disk ---------------------------------------------------------------
+
+  - key: host.disk.root.used_percent
+    name: "Disk / above 80% on {HOST.NAME}"
+    expression: "last(/zabbig Linux Host/host.disk.root.used_percent)>80"
+    severity: warning
+    description: "Root filesystem is more than 80% full."
+
+  - key: host.disk.root.used_percent
+    name: "Disk / above 90% on {HOST.NAME}"
+    expression: "last(/zabbig Linux Host/host.disk.root.used_percent)>90"
+    severity: high
+    description: "Root filesystem is more than 90% full."
+    depends_on:
+      - "Disk / above 80% on {HOST.NAME}"
+
+  - key: host.disk.root.inodes_used_percent
+    name: "Inode exhaustion warning on {HOST.NAME}"
+    expression: "last(/zabbig Linux Host/host.disk.root.inodes_used_percent)>80"
+    severity: warning
+    description: "Root filesystem inode usage above 80%. Inode exhaustion prevents new file creation even when disk space is available."
+
+  - key: host.disk.root.inodes_used_percent
+    name: "Inode exhaustion critical on {HOST.NAME}"
+    expression: "last(/zabbig Linux Host/host.disk.root.inodes_used_percent)>95"
+    severity: high
+    description: "Root filesystem inode usage above 95%."
+    depends_on:
+      - "Inode exhaustion warning on {HOST.NAME}"
+
+  # ---- Services -----------------------------------------------------------
+
+  - key: host.service.sshd
+    name: "sshd is down on {HOST.NAME}"
+    expression: "last(/zabbig Linux Host/host.service.sshd)=0"
+    severity: disaster
+    description: "sshd is not active. SSH access to the host may be unavailable."
+
+  - key: host.service.nginx
+    name: "nginx is down on {HOST.NAME}"
+    expression: "last(/zabbig Linux Host/host.service.nginx)=0"
+    severity: high
+    description: "nginx is not active."
+
+  - key: host.service.cron.process
+    name: "cron is not running on {HOST.NAME}"
+    expression: "last(/zabbig Linux Host/host.service.cron.process)=0"
+    severity: average
+    description: "No cron process found. Scheduled jobs will not run."
+
+  # ---- Network ------------------------------------------------------------
+
+  - key: host.net.rx_errors
+    name: "Network RX errors increasing on {HOST.NAME}"
+    expression: "change(/zabbig Linux Host/host.net.rx_errors)>100"
+    severity: warning
+    description: "Receive error counter increased by more than 100 in the last collection cycle. May indicate NIC or cable issues."
+
+  - key: host.net.rx_dropped
+    name: "Network RX drops increasing on {HOST.NAME}"
+    expression: "change(/zabbig Linux Host/host.net.rx_dropped)>100"
+    severity: warning
+    description: "Receive drop counter increased by more than 100. May indicate kernel buffer overruns."
+
+  - key: host.net.tcp_timewait
+    name: "High TCP TIME_WAIT on {HOST.NAME}"
+    expression: "min(/zabbig Linux Host/host.net.tcp_timewait,10m)>5000"
+    severity: warning
+    description: "TCP TIME_WAIT socket count has been above 5000 for 10 minutes. May indicate connection churn or port exhaustion."
+
+  # ---- Log ----------------------------------------------------------------
+
+  - key: app.log.error
+    name: "Application error detected on {HOST.NAME}"
+    expression: "last(/zabbig Linux Host/app.log.error)=1"
+    severity: average
+    description: "An ERROR line was detected in the application log."
+
+  - key: app.log.severity
+    name: "Application FATAL error on {HOST.NAME}"
+    expression: "last(/zabbig Linux Host/app.log.severity)>=3"
+    severity: high
+    description: "A FATAL or OutOfMemory event was detected in the application log."
+
+  - key: app.log.severity
+    name: "Application ERROR in log on {HOST.NAME}"
+    expression: "last(/zabbig Linux Host/app.log.severity)=2"
+    severity: average
+    description: "An ERROR was detected in the application log."
+    depends_on:
+      - "Application FATAL error on {HOST.NAME}"
+
+  - key: app.log.api.response_time_max_ms
+    name: "Slow API response time on {HOST.NAME}"
+    expression: "last(/zabbig Linux Host/app.log.api.response_time_max_ms)>2000"
+    severity: warning
+    description: "Maximum API response time exceeded 2000 ms in the last collection window."
+
+  # ---- Self-monitoring ----------------------------------------------------
+
+  - key: zabbig.client.run.success
+    name: "zabbig client run failed on {HOST.NAME}"
+    expression: "last(/zabbig Linux Host/zabbig.client.run.success)=0"
+    severity: warning
+    description: "The last zabbig_client run ended with failures. Check the client logs."
+
+  - key: zabbig.client.collectors.failed
+    name: "zabbig client collectors failing on {HOST.NAME}"
+    expression: "last(/zabbig Linux Host/zabbig.client.collectors.failed)>0"
+    severity: warning
+    description: "One or more collectors failed or timed out in the last run."
+    depends_on:
+      - "zabbig client run failed on {HOST.NAME}"
+
+  - key: zabbig.client.run.success
+    name: "zabbig client not sending data on {HOST.NAME}"
+    expression: "nodata(/zabbig Linux Host/zabbig.client.run.success,15m)=1"
+    severity: average
+    description: "No data received from zabbig_client in the last 15 minutes. Client may have stopped or crashed."

@@ -72,7 +72,7 @@ docker compose ps
 docker compose -f docker-compose.client.yml up -d --build
 
 # 4. Provision the Zabbix host and trapper items
-docker exec zabbig-client python3 provision_zabbix.py --config client.docker.yaml
+docker exec zabbig-client bash -c "cd /app/../zabbix_update && python3 create_trapper_items.py --config /app/client.docker.yaml"
 
 # 5. Verify with a dry-run
 docker exec zabbig-client python3 run.py --config client.docker.yaml --dry-run
@@ -89,7 +89,7 @@ docker exec zabbig-client python3 run.py --config client.docker.yaml
 |---|---|
 | [docs/server-setup.md](docs/server-setup.md) | Zabbix server stack — start, stop, env vars, volumes |
 | [docs/client-setup.md](docs/client-setup.md) | Docker client container — build, run, networking |
-| [docs/provisioning.md](docs/provisioning.md) | provision_zabbix.py — CLI flags, credentials, idempotency |
+| [docs/provisioning.md](docs/provisioning.md) | `zabbix_update/` scripts — provisioning templates, items, triggers, dashboards |
 | [docs/configuration.md](docs/configuration.md) | client.yaml and metrics.yaml full reference |
 | [docs/collector-cpu.md](docs/collector-cpu.md) | CPU collector — modes and scenarios |
 | [docs/collector-memory.md](docs/collector-memory.md) | Memory collector — modes and scenarios |

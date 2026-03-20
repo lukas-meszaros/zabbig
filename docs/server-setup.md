@@ -110,7 +110,7 @@ docker compose down
 docker compose down -v
 ```
 
-After a full reset the database is empty. You will need to re-run `provision_zabbix.py` to recreate the Zabbix host and items. See [provisioning.md](provisioning.md).
+After a full reset the database is empty. You will need to re-run the `zabbix_update/` provisioning scripts to recreate the Zabbix host and items. See [provisioning.md](provisioning.md).
 
 ---
 

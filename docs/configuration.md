@@ -45,7 +45,7 @@ zabbix:
 
 #### `host_group`
 
-Used only by `provision_zabbix.py`. The group is created automatically if it does not exist. Has no effect during metric collection.
+Used only by `zabbix_update/create_trapper_items.py`. The group is created automatically if it does not exist. Has no effect during metric collection.
 
 ```yaml
 zabbix:
@@ -240,7 +240,7 @@ state:
 
 #### `self_monitoring_metrics`
 
-When `true`, the client sends five `zabbig.client.*` items at the end of every run describing its own health. Requires matching trapper items provisioned via `provision_zabbix.py`.
+When `true`, the client sends five `zabbig.client.*` items at the end of every run describing its own health. Requires matching trapper items provisioned via `zabbix_update/create_trapper_items.py`.
 
 ```yaml
 features:

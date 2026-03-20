@@ -1,0 +1,429 @@
+# =============================================================================
+# template.yaml — Zabbix template definition for zabbig_client metrics
+#
+# Used by:  create_template.py   — creates a Zabbix template with all items
+#           create_trapper_items.py — creates items directly on a host
+#
+# This file owns everything Zabbix needs to define an item (name, description,
+# history, trends, tags).  The key and value_type come from metrics.yaml;
+# this file adds the presentation/storage layer for Zabbix.
+#
+# Items not listed here will use defaults defined in the `item_defaults`
+# section below.  Only add an entry if you need to override a default.
+# =============================================================================
+
+template:
+  name: "zabbig Linux Host"
+  group: "zabbig Templates"
+  description: "Host metrics collected by the zabbig_client monitoring agent."
+
+# ---------------------------------------------------------------------------
+# Paths to the metrics file (used to read keys and value_type)
+# ---------------------------------------------------------------------------
+metrics_file: "../zabbig_client/metrics.yaml"
+
+# ---------------------------------------------------------------------------
+# Defaults applied to every item unless overridden in the items section
+# ---------------------------------------------------------------------------
+item_defaults:
+  history: "7d"
+  trends: "365d"
+  tags:
+    - tag: "source"
+      value: "zabbig"
+
+# ---------------------------------------------------------------------------
+# Self-monitoring items (created in addition to metrics.yaml items)
+# These match the keys emitted by sender_manager.py
+# ---------------------------------------------------------------------------
+self_monitoring_items:
+  - key: "zabbig.client.run.success"
+    name: "zabbig client: run success"
+    description: "1 = last run completed successfully, 0 = run ended with failures."
+    value_type: int
+    tags:
+      - tag: "source"
+        value: "zabbig"
+      - tag: "component"
+        value: "self-monitoring"
+
+  - key: "zabbig.client.collectors.total"
+    name: "zabbig client: collectors total"
+    description: "Total number of enabled collectors in the last run."
+    value_type: int
+    tags:
+      - tag: "source"
+        value: "zabbig"
+      - tag: "component"
+        value: "self-monitoring"
+
+  - key: "zabbig.client.collectors.failed"
+    name: "zabbig client: collectors failed"
+    description: "Number of collectors that failed or timed out in the last run."
+    value_type: int
+    tags:
+      - tag: "source"
+        value: "zabbig"
+      - tag: "component"
+        value: "self-monitoring"
+
+  - key: "zabbig.client.duration_ms"
+    name: "zabbig client: run duration (ms)"
+    description: "Wall-clock duration of the last client run in milliseconds."
+    value_type: int
+    tags:
+      - tag: "source"
+        value: "zabbig"
+      - tag: "component"
+        value: "self-monitoring"
+
+  - key: "zabbig.client.metrics.sent"
+    name: "zabbig client: metrics sent"
+    description: "Total number of metric values successfully accepted by Zabbix in the last run."
+    value_type: int
+    tags:
+      - tag: "source"
+        value: "zabbig"
+      - tag: "component"
+        value: "self-monitoring"
+
+# ---------------------------------------------------------------------------
+# Per-item overrides
+# Only list items here that need non-default history/trends/name/description/tags.
+# Items in metrics.yaml that are NOT listed here use item_defaults above.
+# ---------------------------------------------------------------------------
+items:
+
+  # ---- CPU ----------------------------------------------------------------
+
+  - key: host.cpu.util
+    name: "CPU utilisation %"
+    description: "Total CPU utilisation across all cores (two /proc/stat reads, 200 ms apart)."
+    tags:
+      - tag: "source"
+        value: "zabbig"
+      - tag: "component"
+        value: "cpu"
+
+  - key: host.cpu.load1
+    name: "Load average 1 min"
+    description: "System load average over the last 1 minute."
+    tags:
+      - tag: "source"
+        value: "zabbig"
+      - tag: "component"
+        value: "cpu"
+
+  - key: host.cpu.load5
+    name: "Load average 5 min"
+    description: "System load average over the last 5 minutes."
+    tags:
+      - tag: "source"
+        value: "zabbig"
+      - tag: "component"
+        value: "cpu"
+
+  - key: host.cpu.load15
+    name: "Load average 15 min"
+    description: "System load average over the last 15 minutes."
+    tags:
+      - tag: "source"
+        value: "zabbig"
+      - tag: "component"
+        value: "cpu"
+
+  - key: host.system.uptime
+    name: "System uptime"
+    description: "Seconds since last boot. A sudden drop indicates an unexpected reboot."
+    trends: "365d"
+    tags:
+      - tag: "source"
+        value: "zabbig"
+      - tag: "component"
+        value: "system"
+
+  # ---- Memory -------------------------------------------------------------
+
+  - key: host.memory.used_percent
+    name: "Memory used %"
+    description: "Percentage of RAM in use. Uses MemAvailable (not MemFree) for accuracy."
+    tags:
+      - tag: "source"
+        value: "zabbig"
+      - tag: "component"
+        value: "memory"
+
+  - key: host.memory.available_bytes
+    name: "Memory available bytes"
+    description: "Bytes of RAM available for new allocations without swapping (MemAvailable)."
+    tags:
+      - tag: "source"
+        value: "zabbig"
+      - tag: "component"
+        value: "memory"
+
+  - key: host.memory.swap_used_percent
+    name: "Swap used %"
+    description: "Percentage of swap in use. Reports 0 when no swap is configured."
+    tags:
+      - tag: "source"
+        value: "zabbig"
+      - tag: "component"
+        value: "memory"
+
+  # ---- Disk ---------------------------------------------------------------
+
+  - key: host.disk.root.used_percent
+    name: "Disk / used %"
+    description: "Percentage of root filesystem blocks in use."
+    tags:
+      - tag: "source"
+        value: "zabbig"
+      - tag: "component"
+        value: "disk"
+
+  - key: host.disk.root.free_bytes
+    name: "Disk / free bytes"
+    description: "Bytes available to non-root users on the root filesystem."
+    tags:
+      - tag: "source"
+        value: "zabbig"
+      - tag: "component"
+        value: "disk"
+
+  - key: host.disk.root.used_bytes
+    name: "Disk / used bytes"
+    description: "Bytes currently used on the root filesystem."
+    tags:
+      - tag: "source"
+        value: "zabbig"
+      - tag: "component"
+        value: "disk"
+
+  - key: host.disk.data.used_percent
+    name: "Disk /data used %"
+    description: "Percentage of /data filesystem blocks in use."
+    tags:
+      - tag: "source"
+        value: "zabbig"
+      - tag: "component"
+        value: "disk"
+
+  - key: host.disk.root.inodes_used_percent
+    name: "Disk / inodes used %"
+    description: "Percentage of inode slots in use on the root filesystem."
+    tags:
+      - tag: "source"
+        value: "zabbig"
+      - tag: "component"
+        value: "disk"
+
+  - key: host.disk.root.inodes_free
+    name: "Disk / inodes free"
+    description: "Number of free inode slots on the root filesystem."
+    tags:
+      - tag: "source"
+        value: "zabbig"
+      - tag: "component"
+        value: "disk"
+
+  - key: host.disk.root.inodes_used
+    name: "Disk / inodes used"
+    description: "Number of inode slots in use on the root filesystem."
+    tags:
+      - tag: "source"
+        value: "zabbig"
+      - tag: "component"
+        value: "disk"
+
+  - key: host.disk.root.inodes_total
+    name: "Disk / inodes total"
+    description: "Total inode slots on the root filesystem."
+    trends: "365d"
+    tags:
+      - tag: "source"
+        value: "zabbig"
+      - tag: "component"
+        value: "disk"
+
+  # ---- Services -----------------------------------------------------------
+
+  - key: host.service.sshd
+    name: "Service: sshd"
+    description: "1 = sshd active, 0 = not active."
+    trends: "0"
+    tags:
+      - tag: "source"
+        value: "zabbig"
+      - tag: "component"
+        value: "service"
+
+  - key: host.service.nginx
+    name: "Service: nginx"
+    description: "1 = nginx active, 0 = not active."
+    trends: "0"
+    tags:
+      - tag: "source"
+        value: "zabbig"
+      - tag: "component"
+        value: "service"
+
+  - key: host.service.cron.process
+    name: "Service: cron (process check)"
+    description: "1 = cron process found in /proc, 0 = not found."
+    trends: "0"
+    tags:
+      - tag: "source"
+        value: "zabbig"
+      - tag: "component"
+        value: "service"
+
+  # ---- Network ------------------------------------------------------------
+
+  - key: host.net.rx_bytes_per_sec
+    name: "Network RX bytes/sec"
+    description: "Inbound throughput in bytes/sec across all non-loopback interfaces."
+    tags:
+      - tag: "source"
+        value: "zabbig"
+      - tag: "component"
+        value: "network"
+
+  - key: host.net.tx_bytes_per_sec
+    name: "Network TX bytes/sec"
+    description: "Outbound throughput in bytes/sec across all non-loopback interfaces."
+    tags:
+      - tag: "source"
+        value: "zabbig"
+      - tag: "component"
+        value: "network"
+
+  - key: host.net.rx_errors
+    name: "Network RX errors"
+    description: "Cumulative receive errors since boot across all non-loopback interfaces."
+    tags:
+      - tag: "source"
+        value: "zabbig"
+      - tag: "component"
+        value: "network"
+
+  - key: host.net.tx_errors
+    name: "Network TX errors"
+    description: "Cumulative transmit errors since boot."
+    tags:
+      - tag: "source"
+        value: "zabbig"
+      - tag: "component"
+        value: "network"
+
+  - key: host.net.rx_dropped
+    name: "Network RX dropped"
+    description: "Cumulative receive packet drops since boot (kernel buffer overruns)."
+    tags:
+      - tag: "source"
+        value: "zabbig"
+      - tag: "component"
+        value: "network"
+
+  - key: host.net.tx_dropped
+    name: "Network TX dropped"
+    description: "Cumulative transmit packet drops since boot."
+    tags:
+      - tag: "source"
+        value: "zabbig"
+      - tag: "component"
+        value: "network"
+
+  - key: host.net.tcp_inuse
+    name: "TCP sockets in use"
+    description: "Number of currently open TCP sockets."
+    tags:
+      - tag: "source"
+        value: "zabbig"
+      - tag: "component"
+        value: "network"
+
+  - key: host.net.tcp_timewait
+    name: "TCP sockets TIME_WAIT"
+    description: "TCP sockets in TIME_WAIT state. Persistently high values indicate connection churn."
+    tags:
+      - tag: "source"
+        value: "zabbig"
+      - tag: "component"
+        value: "network"
+
+  - key: host.net.tcp_orphans
+    name: "TCP orphaned sockets"
+    description: "Orphaned TCP sockets not attached to a file descriptor. Growing count indicates a socket leak."
+    tags:
+      - tag: "source"
+        value: "zabbig"
+      - tag: "component"
+        value: "network"
+
+  - key: host.net.udp_inuse
+    name: "UDP sockets in use"
+    description: "Number of currently open UDP sockets."
+    tags:
+      - tag: "source"
+        value: "zabbig"
+      - tag: "component"
+        value: "network"
+
+  - key: host.net.eth0.rx_bytes_per_sec
+    name: "eth0 RX bytes/sec"
+    description: "Inbound throughput for eth0 in bytes/sec."
+    tags:
+      - tag: "source"
+        value: "zabbig"
+      - tag: "component"
+        value: "network"
+
+  - key: host.net.eth0.tx_bytes_per_sec
+    name: "eth0 TX bytes/sec"
+    description: "Outbound throughput for eth0 in bytes/sec."
+    tags:
+      - tag: "source"
+        value: "zabbig"
+      - tag: "component"
+        value: "network"
+
+  # ---- Log ----------------------------------------------------------------
+
+  - key: app.log.error
+    name: "App log: error detected"
+    description: "1 = ERROR line appeared in the application log since last scan, 0 = clean."
+    trends: "0"
+    tags:
+      - tag: "source"
+        value: "zabbig"
+      - tag: "component"
+        value: "log"
+
+  - key: app.log.severity
+    name: "App log: severity level"
+    description: "Highest severity in the application log since last scan. 3=FATAL, 2=ERROR, 1=WARN, 0=clean."
+    trends: "0"
+    tags:
+      - tag: "source"
+        value: "zabbig"
+      - tag: "component"
+        value: "log"
+
+  - key: app.log.api.response_time_max_ms
+    name: "App log: max API response time (ms)"
+    description: "Maximum response_time value seen in the access log since last scan."
+    tags:
+      - tag: "source"
+        value: "zabbig"
+      - tag: "component"
+        value: "log"
+
+  - key: app.log.payment.calls.total
+    name: "App log: payment API calls total"
+    description: "Cumulative count of POST /api/v1/payment lines in the access log."
+    tags:
+      - tag: "source"
+        value: "zabbig"
+      - tag: "component"
+        value: "log"

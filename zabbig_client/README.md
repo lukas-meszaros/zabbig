@@ -31,7 +31,6 @@ A self-contained Python monitoring client that collects host metrics and service
 ```
 zabbig_client/
   run.py                          # entry point — add to cron
-  provision_zabbix.py             # auto-create Zabbix host + trapper items
   client.yaml                     # runtime config
   metrics.yaml                    # metric definitions
 
@@ -51,7 +50,7 @@ zabbig_client/
 
     zabbix_utils/                 # vendored official Zabbix Python library
     yaml/                         # vendored PyYAML pure-Python source
-    requests/                     # vendored requests (used by provision script)
+    requests/                     # vendored requests (used by zabbix_update/ scripts)
 
   tests/
     test_config_loader.py
@@ -77,10 +76,11 @@ Set at minimum:
 ### 2. Provision Zabbix host and trapper items
 
 ```bash
-python3 provision_zabbix.py
+cd ../zabbix_update
+python3 create_trapper_items.py --config ../zabbig_client/client.yaml
 ```
 
-Prompts for your Zabbix admin credentials (or set `ZABBIX_API_USER` / `ZABBIX_API_PASSWORD` env vars). Creates the host, host group, and all trapper items defined in `metrics.yaml`.
+Prompts for your Zabbix admin credentials if not supplied via `--user`/`--password` or the `ZABBIX_ADMIN_USER`/`ZABBIX_ADMIN_PASSWORD` env vars. The password prompt is hidden. Creates the host, host group, and all trapper items defined in `metrics.yaml`.
 
 ### 3. Dry-run to verify
 
@@ -125,7 +125,7 @@ python3 run.py
 | Document | Contents |
 |----------|----------|
 | [configuration.md](../docs/configuration.md) | Full `client.yaml` and `metrics.yaml` reference |
-| [provisioning.md](../docs/provisioning.md) | `provision_zabbix.py` usage, CLI flags, credentials |
+| [provisioning.md](../docs/provisioning.md) | `zabbix_update/` scripts — provisioning templates, items, triggers, dashboards |
 | [collector-cpu.md](../docs/collector-cpu.md) | CPU collector modes and scenarios |
 | [collector-memory.md](../docs/collector-memory.md) | Memory collector modes and scenarios |
 | [collector-disk.md](../docs/collector-disk.md) | Disk collector modes and scenarios |

@@ -1,0 +1,225 @@
+# =============================================================================
+# dashboard.yaml — Zabbix dashboard definition for zabbig_client metrics
+#
+# Used by: create_dashboard.py
+#
+# Generates a starting-point dashboard. Refine layout and add advanced
+# widgets via the Zabbix web UI after initial creation.
+#
+# Supported widget types:
+#   graph       — SVG graph widget for one or more numeric items over time
+#   plain_value — Shows the current value of a single item
+#   problems    — Problem list widget (no keys required)
+#   clock       — Server or local time clock (no keys required)
+#
+# Widget fields:
+#   type         string  REQUIRED. graph | plain_value | problems | clock
+#   title        string  REQUIRED. Widget header label.
+#   keys         list    Items to display. For graph: multiple keys create
+#                        multi-line graph. For plain_value: first key is used.
+#                        Not required for problems or clock.
+#   width        int     Grid columns (1–24). Default: 6
+#   height       int     Grid rows. Default: 3
+#
+# Layout: widgets are placed left-to-right, top-to-bottom in the order listed.
+# The grid is 24 columns wide. Rows grow automatically.
+# =============================================================================
+
+name: "zabbig Linux Host Overview"
+host: ""   # Filled in at runtime by create_dashboard.py from --host argument
+
+pages:
+
+  # --------------------------------------------------------------------------
+  - name: "Overview"
+    widgets:
+
+      - type: problems
+        title: "Active Problems"
+        width: 24
+        height: 4
+
+      - type: graph
+        title: "CPU Utilisation %"
+        keys:
+          - host.cpu.util
+        width: 12
+        height: 4
+
+      - type: graph
+        title: "Load Average"
+        keys:
+          - host.cpu.load1
+          - host.cpu.load5
+        width: 12
+        height: 4
+
+      - type: graph
+        title: "Memory Used %"
+        keys:
+          - host.memory.used_percent
+        width: 8
+        height: 4
+
+      - type: graph
+        title: "Swap Used %"
+        keys:
+          - host.memory.swap_used_percent
+        width: 8
+        height: 4
+
+      - type: plain_value
+        title: "Memory Available"
+        keys:
+          - host.memory.available_bytes
+        width: 8
+        height: 4
+
+      - type: graph
+        title: "Disk / Used %"
+        keys:
+          - host.disk.root.used_percent
+        width: 8
+        height: 4
+
+      - type: graph
+        title: "Disk / Free Bytes"
+        keys:
+          - host.disk.root.free_bytes
+        width: 8
+        height: 4
+
+      - type: graph
+        title: "Disk / Inodes Used %"
+        keys:
+          - host.disk.root.inodes_used_percent
+        width: 8
+        height: 4
+
+  # --------------------------------------------------------------------------
+  - name: "Services & Logs"
+    widgets:
+
+      - type: plain_value
+        title: "sshd"
+        keys:
+          - host.service.sshd
+        width: 6
+        height: 3
+
+      - type: plain_value
+        title: "nginx"
+        keys:
+          - host.service.nginx
+        width: 6
+        height: 3
+
+      - type: plain_value
+        title: "cron"
+        keys:
+          - host.service.cron.process
+        width: 6
+        height: 3
+
+      - type: plain_value
+        title: "App Log Severity"
+        keys:
+          - app.log.severity
+        width: 6
+        height: 3
+
+      - type: graph
+        title: "App Log: Error Detected"
+        keys:
+          - app.log.error
+        width: 12
+        height: 4
+
+      - type: graph
+        title: "API Max Response Time (ms)"
+        keys:
+          - app.log.api.response_time_max_ms
+        width: 12
+        height: 4
+
+  # --------------------------------------------------------------------------
+  - name: "Network"
+    widgets:
+
+      - type: graph
+        title: "Network Throughput (bytes/sec)"
+        keys:
+          - host.net.rx_bytes_per_sec
+          - host.net.tx_bytes_per_sec
+        width: 12
+        height: 5
+
+      - type: graph
+        title: "Network Errors & Drops"
+        keys:
+          - host.net.rx_errors
+          - host.net.tx_errors
+          - host.net.rx_dropped
+          - host.net.tx_dropped
+        width: 12
+        height: 5
+
+      - type: graph
+        title: "TCP Sockets"
+        keys:
+          - host.net.tcp_inuse
+          - host.net.tcp_timewait
+        width: 12
+        height: 4
+
+      - type: plain_value
+        title: "UDP Sockets"
+        keys:
+          - host.net.udp_inuse
+        width: 6
+        height: 4
+
+  # --------------------------------------------------------------------------
+  - name: "Client Health"
+    widgets:
+
+      - type: plain_value
+        title: "Last Run Success"
+        keys:
+          - zabbig.client.run.success
+        width: 6
+        height: 3
+
+      - type: plain_value
+        title: "Collectors Failed"
+        keys:
+          - zabbig.client.collectors.failed
+        width: 6
+        height: 3
+
+      - type: plain_value
+        title: "Metrics Sent"
+        keys:
+          - zabbig.client.metrics.sent
+        width: 6
+        height: 3
+
+      - type: graph
+        title: "Run Duration (ms)"
+        keys:
+          - zabbig.client.duration_ms
+        width: 12
+        height: 4
+
+      - type: graph
+        title: "Collectors Total vs Failed"
+        keys:
+          - zabbig.client.collectors.total
+          - zabbig.client.collectors.failed
+        width: 12
+        height: 4
+
+      - type: clock
+        title: "Server Time"
+        width: 6
+        height: 3

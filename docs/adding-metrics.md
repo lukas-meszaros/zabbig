@@ -46,13 +46,13 @@ This runs all collectors without sending anything to Zabbix. Check that the new 
 
 ```bash
 # From inside the Docker container
-docker exec zabbig-client python3 provision_zabbix.py --config client.docker.yaml
+docker exec zabbig-client bash -c "cd /app/../zabbix_update && python3 create_trapper_items.py --config /app/client.docker.yaml"
 
 # Or from the host
-python3 provision_zabbix.py --config client.yaml
+cd zabbix_update && python3 create_trapper_items.py --config ../zabbig_client/client.yaml
 ```
 
-`provision_zabbix.py` is idempotent — existing items are updated, new ones are created.
+`create_trapper_items.py` is idempotent — existing items are skipped, new ones are created.
 
 ### 4. Start a real run and verify in Zabbix
 
@@ -148,4 +148,4 @@ docker exec zabbig-client python3 -m unittest discover -s tests -v
 
 ### 6. Provision Zabbix
 
-Re-run `provision_zabbix.py` to create trapper items for any new metrics added in step 4.
+Re-run `create_trapper_items.py` to create trapper items for any new metrics added in step 4.

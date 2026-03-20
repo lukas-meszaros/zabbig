@@ -19,8 +19,8 @@ zabbix:
   # Defaults to the system hostname if left empty.
   host_name: "prod-server-01"
 
-  # Zabbix host group. Created automatically by provision_zabbix.py if it does not
-  # already exist. Used only by provision_zabbix.py, not the sender.
+  # Zabbix host group. Created automatically by zabbix_update/create_trapper_items.py
+  # if it does not already exist. Used only during provisioning, not by the sender.
   host_group: "zabbig Clients"
 
   # TCP connection timeout in seconds

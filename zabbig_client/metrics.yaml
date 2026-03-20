@@ -61,31 +61,15 @@
 #                                            not send anything to Zabbix.
 #                              Default: skip
 #
-#   importance       string    low | normal | high | critical
-#                              Informational label used in log output and the
-#                              run summary. Does not affect send behaviour.
-#                              Default: normal
-#
-#   tags             list      Arbitrary string labels (e.g. [system, cpu]).
-#                              Informational only — used for filtering in logs.
-#                              Default: []
-#
 # -----------------------------------------------------------------------------
 # METRIC ENTRY FIELDS
 # -----------------------------------------------------------------------------
 # Each entry under `metrics` supports the fields above (enabled, delivery,
-# timeout_seconds, error_policy, importance, tags) plus the following:
+# timeout_seconds, error_policy) plus the following:
 #
 #   id               string    REQUIRED. Unique identifier for this metric
 #                              within this file. Used in logs and state files.
 #                              Example: cpu_util
-#
-#   name             string    Optional. Human-readable display name shown in
-#                              log output.
-#                              Example: "CPU utilization percent"
-#
-#   description      string    Optional. Longer free-text description. Supports
-#                              YAML block scalars (> or |).
 #
 #   collector        string    REQUIRED. Which built-in collector to use.
 #                              Valid values: cpu | memory | disk | service
@@ -343,8 +327,6 @@ defaults:
   delivery: batch
   timeout_seconds: 10
   error_policy: skip
-  importance: normal
-  tags: []
 
 # ---------------------------------------------------------------------------
 # Collector-level defaults — override global defaults for a specific collector
@@ -377,56 +359,42 @@ metrics:
   # ---- CPU ---------------------------------------------------------------
 
   - id: cpu_util
-    name: CPU utilization percent
-    description: Current total CPU utilization as a percentage.
     enabled: true
     collector: cpu
     key: host.cpu.util
     value_type: float
     unit: "%"
     delivery: batch
-    importance: normal
     timeout_seconds: 5
     error_policy: skip
-    tags: [system, cpu]
     params:
       mode: percent
 
   - id: load_avg_1
-    name: Load average 1-minute
-    description: System load average over 1 minute.
     enabled: true
     collector: cpu
     key: host.cpu.load1
     value_type: float
     unit: ""
     delivery: batch
-    importance: normal
     timeout_seconds: 5
     error_policy: skip
-    tags: [system, cpu]
     params:
       mode: load1
 
   - id: load_avg_5
-    name: Load average 5-minute
-    description: System load average over 5 minutes.
     enabled: true
     collector: cpu
     key: host.cpu.load5
     value_type: float
     unit: ""
     delivery: batch
-    importance: normal
     timeout_seconds: 5
     error_policy: skip
-    tags: [system, cpu]
     params:
       mode: load5
 
   - id: load_avg_15
-    name: Load average 15-minute
-    description: System load average over 15 minutes.
     # Disabled — enables: false means this metric is skipped entirely
     enabled: false
     collector: cpu
@@ -434,120 +402,92 @@ metrics:
     value_type: float
     unit: ""
     delivery: batch
-    importance: low
     timeout_seconds: 5
     error_policy: skip
-    tags: [system, cpu]
     params:
       mode: load15
 
   - id: uptime
-    name: System uptime seconds
-    description: How long the system has been running, in seconds.
     enabled: true
     collector: cpu
     key: host.system.uptime
     value_type: float
     unit: "s"
     delivery: batch
-    importance: low
     timeout_seconds: 5
     error_policy: skip
-    tags: [system]
     params:
       mode: uptime
 
   # ---- Memory ------------------------------------------------------------
 
   - id: mem_used_percent
-    name: Memory used percent
-    description: Percentage of RAM currently in use.
     enabled: true
     collector: memory
     key: host.memory.used_percent
     value_type: float
     unit: "%"
     delivery: batch
-    importance: normal
     timeout_seconds: 5
     error_policy: skip
-    tags: [system, memory]
     params:
       mode: used_percent
 
   - id: mem_available_bytes
-    name: Memory available bytes
-    description: Amount of RAM available for new allocations (MemAvailable).
     enabled: true
     collector: memory
     key: host.memory.available_bytes
     value_type: int
     unit: "B"
     delivery: batch
-    importance: normal
     timeout_seconds: 5
     error_policy: skip
-    tags: [system, memory]
     params:
       mode: available_bytes
 
   - id: swap_used_percent
-    name: Swap used percent
-    description: Percentage of swap space in use. Returns 0 if no swap is configured.
     enabled: true
     collector: memory
     key: host.memory.swap_used_percent
     value_type: float
     unit: "%"
     delivery: batch
-    importance: low
     timeout_seconds: 5
     # fallback to 0 if /proc/meminfo is unreadable (should not happen normally)
     error_policy: fallback
     fallback_value: "0"
-    tags: [system, memory]
     params:
       mode: swap_used_percent
 
   # ---- Disk --------------------------------------------------------------
 
   - id: disk_root_used_percent
-    name: Root filesystem used percent
-    description: Percentage of / filesystem used.
     enabled: true
     collector: disk
     key: host.disk.root.used_percent
     value_type: float
     unit: "%"
     delivery: batch
-    importance: high
     timeout_seconds: 10
     error_policy: skip
-    tags: [system, disk]
     params:
       mount: "/"
       mode: used_percent
 
   - id: disk_root_free_bytes
-    name: Root filesystem free bytes
-    description: Free bytes on the / filesystem (available to non-root).
     enabled: true
     collector: disk
     key: host.disk.root.free_bytes
     value_type: int
     unit: "B"
     delivery: batch
-    importance: high
     timeout_seconds: 10
     error_policy: skip
-    tags: [system, disk]
     params:
       mount: "/"
       mode: free_bytes
 
   - id: disk_root_used_bytes
-    name: Root filesystem used bytes
-    description: Bytes currently used on the / filesystem.
     # Disabled by default — enable alongside used_percent if you want the raw bytes too
     enabled: true
     collector: disk
@@ -555,17 +495,13 @@ metrics:
     value_type: int
     unit: "B"
     delivery: batch
-    importance: normal
     timeout_seconds: 10
     error_policy: skip
-    tags: [system, disk]
     params:
       mount: "/"
       mode: used_bytes
 
   - id: disk_data_used_percent
-    name: /data filesystem used percent
-    description: Percentage of /data filesystem used.
     # Disabled — enable if you have a separate data partition
     enabled: false
     collector: disk
@@ -573,10 +509,8 @@ metrics:
     value_type: float
     unit: "%"
     delivery: batch
-    importance: normal
     timeout_seconds: 10
     error_policy: skip
-    tags: [system, disk]
     params:
       mount: "/data"
       mode: used_percent
@@ -584,69 +518,53 @@ metrics:
   # ---- Inodes ------------------------------------------------------------
 
   - id: disk_root_inodes_used_percent
-    name: Root filesystem inodes used percent
-    description: Percentage of inode slots in use on the / filesystem.
     enabled: true
     collector: disk
     key: host.disk.root.inodes_used_percent
     value_type: float
     unit: "%"
     delivery: batch
-    importance: high
     timeout_seconds: 10
     error_policy: skip
-    tags: [system, disk, inodes]
     params:
       mount: "/"
       mode: inodes_used_percent
 
   - id: disk_root_inodes_free
-    name: Root filesystem inodes free
-    description: Number of free inode slots on the / filesystem.
     enabled: true
     collector: disk
     key: host.disk.root.inodes_free
     value_type: int
     unit: ""
     delivery: batch
-    importance: normal
     timeout_seconds: 10
     error_policy: skip
-    tags: [system, disk, inodes]
     params:
       mount: "/"
       mode: inodes_free
 
   - id: disk_root_inodes_used
-    name: Root filesystem inodes used
-    description: Number of inode slots currently in use on the / filesystem.
     enabled: false
     collector: disk
     key: host.disk.root.inodes_used
     value_type: int
     unit: ""
     delivery: batch
-    importance: low
     timeout_seconds: 10
     error_policy: skip
-    tags: [system, disk, inodes]
     params:
       mount: "/"
       mode: inodes_used
 
   - id: disk_root_inodes_total
-    name: Root filesystem inodes total
-    description: Total inode slots on the / filesystem. Useful as a capacity reference.
     enabled: false
     collector: disk
     key: host.disk.root.inodes_total
     value_type: int
     unit: ""
     delivery: batch
-    importance: low
     timeout_seconds: 10
     error_policy: skip
-    tags: [system, disk, inodes]
     params:
       mount: "/"
       mode: inodes_total
@@ -654,27 +572,19 @@ metrics:
   # ---- Services ----------------------------------------------------------
 
   - id: svc_sshd
-    name: sshd service state
-    description: >
-      1 = sshd is active (running), 0 = sshd is not active.
-      Uses systemd check (systemctl is-active sshd).
     enabled: true
     collector: service
     key: host.service.sshd
     value_type: int
     unit: ""
     delivery: immediate     # service checks are sent immediately when collected
-    importance: critical
     timeout_seconds: 8
     error_policy: mark_failed
-    tags: [service, ssh]
     params:
       check_mode: systemd
       service_name: sshd
 
   - id: svc_nginx
-    name: nginx service state
-    description: 1 = nginx running, 0 = nginx not running.
     # Disable if nginx is not installed on this host
     enabled: true
     collector: service
@@ -682,30 +592,22 @@ metrics:
     value_type: int
     unit: ""
     delivery: immediate
-    importance: critical
     timeout_seconds: 8
     error_policy: fallback
     fallback_value: "0"       # treat collector error the same as service down
-    tags: [service, web]
     params:
       check_mode: systemd
       service_name: nginx
 
   - id: svc_cron_process
-    name: cron process check
-    description: >
-      Process-pattern fallback for checking if cron is running.
-      Uses /proc scan — works without systemd.
     enabled: true
     collector: service
     key: host.service.cron.process
     value_type: int
     unit: ""
     delivery: immediate
-    importance: normal
     timeout_seconds: 8
     error_policy: skip
-    tags: [service, cron]
     params:
       check_mode: process
       process_pattern: "cron"   # matches 'cron', 'crond', etc.
@@ -713,223 +615,155 @@ metrics:
   # ---- Network -----------------------------------------------------------
 
   - id: net_rx_bytes_per_sec
-    name: Network receive bytes/sec
-    description: >
-      Inbound throughput in bytes per second across all non-loopback
-      interfaces. Computed from two /proc/net/dev reads 1 second apart.
     enabled: false
     collector: network
     key: host.net.rx_bytes_per_sec
     value_type: float
     unit: "B/s"
     delivery: batch
-    importance: normal
     timeout_seconds: 5
     error_policy: skip
-    tags: [system, network]
     params:
       interface: total
       mode: rx_bytes_per_sec
 
   - id: net_tx_bytes_per_sec
-    name: Network transmit bytes/sec
-    description: >
-      Outbound throughput in bytes per second across all non-loopback
-      interfaces. Computed from two /proc/net/dev reads 1 second apart.
     enabled: false
     collector: network
     key: host.net.tx_bytes_per_sec
     value_type: float
     unit: "B/s"
     delivery: batch
-    importance: normal
     timeout_seconds: 5
     error_policy: skip
-    tags: [system, network]
     params:
       interface: total
       mode: tx_bytes_per_sec
 
   - id: net_rx_errors
-    name: Network receive errors
-    description: >
-      Cumulative receive hardware/driver errors since boot across all
-      non-loopback interfaces. A rising value indicates NIC or cable
-      problems.
     enabled: true
     collector: network
     key: host.net.rx_errors
     value_type: int
     unit: ""
     delivery: batch
-    importance: high
     timeout_seconds: 10
     error_policy: skip
-    tags: [system, network]
     params:
       interface: total
       mode: rx_errors
 
   - id: net_tx_errors
-    name: Network transmit errors
-    description: >
-      Cumulative transmit errors since boot across all non-loopback
-      interfaces.
     enabled: true
     collector: network
     key: host.net.tx_errors
     value_type: int
     unit: ""
     delivery: batch
-    importance: high
     timeout_seconds: 10
     error_policy: skip
-    tags: [system, network]
     params:
       interface: total
       mode: tx_errors
 
   - id: net_rx_dropped
-    name: Network receive drops
-    description: >
-      Cumulative receive packet drops since boot (kernel buffer overruns)
-      across all non-loopback interfaces.
     enabled: true
     collector: network
     key: host.net.rx_dropped
     value_type: int
     unit: ""
     delivery: batch
-    importance: high
     timeout_seconds: 10
     error_policy: skip
-    tags: [system, network]
     params:
       interface: total
       mode: rx_dropped
 
   - id: net_tx_dropped
-    name: Network transmit drops
-    description: >
-      Cumulative transmit packet drops since boot across all non-loopback
-      interfaces.
     enabled: true
     collector: network
     key: host.net.tx_dropped
     value_type: int
     unit: ""
     delivery: batch
-    importance: high
     timeout_seconds: 10
     error_policy: skip
-    tags: [system, network]
     params:
       interface: total
       mode: tx_dropped
 
   - id: net_tcp_inuse
-    name: TCP sockets in use
-    description: Number of currently open TCP sockets.
     enabled: true
     collector: network
     key: host.net.tcp_inuse
     value_type: int
     unit: ""
     delivery: batch
-    importance: normal
     timeout_seconds: 10
     error_policy: skip
-    tags: [system, network]
     params:
       mode: tcp_inuse
 
   - id: net_tcp_timewait
-    name: TCP sockets TIME_WAIT
-    description: >
-      Number of TCP sockets in TIME_WAIT state. A persistently high value
-      can indicate connection churn or port exhaustion.
     enabled: true
     collector: network
     key: host.net.tcp_timewait
     value_type: int
     unit: ""
     delivery: batch
-    importance: normal
     timeout_seconds: 10
     error_policy: skip
-    tags: [system, network]
     params:
       mode: tcp_timewait
 
   - id: net_tcp_orphans
-    name: TCP orphaned sockets
-    description: >
-      Number of orphaned TCP sockets (not attached to any file descriptor).
-      A high and growing count can indicate a socket leak.
     enabled: false
     collector: network
     key: host.net.tcp_orphans
     value_type: int
     unit: ""
     delivery: batch
-    importance: low
     timeout_seconds: 10
     error_policy: skip
-    tags: [system, network]
     params:
       mode: tcp_orphans
 
   - id: net_udp_inuse
-    name: UDP sockets in use
-    description: Number of currently open UDP sockets.
     enabled: false
     collector: network
     key: host.net.udp_inuse
     value_type: int
     unit: ""
     delivery: batch
-    importance: low
     timeout_seconds: 10
     error_policy: skip
-    tags: [system, network]
     params:
       mode: udp_inuse
 
   # Per-interface examples — disabled by default; set interface to match your NIC.
 
   - id: net_eth0_rx_bytes_per_sec
-    name: eth0 receive bytes/sec
-    description: >
-      Per-interface receive throughput for eth0. Enable and adjust
-      params.interface to match the NIC name on your host (e.g. ens3, enp1s0).
     enabled: false
     collector: network
     key: host.net.eth0.rx_bytes_per_sec
     value_type: float
     unit: "B/s"
     delivery: batch
-    importance: normal
     timeout_seconds: 5
     error_policy: skip
-    tags: [system, network]
     params:
       interface: eth0
       mode: rx_bytes_per_sec
 
   - id: net_eth0_tx_bytes_per_sec
-    name: eth0 transmit bytes/sec
-    description: >
-      Per-interface transmit throughput for eth0.
     enabled: false
     collector: network
     key: host.net.eth0.tx_bytes_per_sec
     value_type: float
     unit: "B/s"
     delivery: batch
-    importance: normal
     timeout_seconds: 5
     error_policy: skip
-    tags: [system, network]
     params:
       interface: eth0
       mode: tx_bytes_per_sec
@@ -937,20 +771,14 @@ metrics:
   # ---- Log ---------------------------------------------------------------
 
   - id: log_app_error
-    name: Application log error detected
-    description: >
-      Returns 1 if any ERROR line appeared in the application log since the
-      last scan, 0 if the window was clean.
     enabled: true
     collector: log
     key: app.log.error
     value_type: int
     unit: ""
     delivery: immediate
-    importance: high
     timeout_seconds: 30
     error_policy: skip
-    tags: [app, log]
     params:
       path: "/var/log/myapp/app.log"
       match: "ERROR"
@@ -960,20 +788,14 @@ metrics:
         - value: 1
 
   - id: log_app_severity
-    name: Application log severity level
-    description: >
-      Highest severity seen in the application log since the last scan.
-      3=FATAL/OOM, 2=ERROR, 1=WARN, 0=clean.
     enabled: true
     collector: log
     key: "app.log.severity"
     value_type: int
     unit: ""
     delivery: immediate
-    importance: high
     timeout_seconds: 30
     error_policy: skip
-    tags: [app, log]
     params:
       path: "/var/log/myapp/app.log"
       match: "WARN|ERROR|FATAL|OutOfMemory"
@@ -990,20 +812,14 @@ metrics:
         - value: 0
 
   - id: log_api_response_time_max
-    name: API max response time (log)
-    description: >
-      Maximum response_time value (ms) seen in the access log since the last
-      scan. Returns 0 if no matching lines were found.
     enabled: true
     collector: log
     key: "app.log.api.response_time_max_ms"
     value_type: float
     unit: "ms"
     delivery: batch
-    importance: normal
     timeout_seconds: 30
     error_policy: skip
-    tags: [app, log]
     params:
       path: "/var/log/myapp/access.log"
       match: "response_time="
@@ -1022,20 +838,14 @@ metrics:
         - value: 0
 
   - id: log_payment_api_calls_total
-    name: Payment API calls total (log)
-    description: >
-      Total number of POST /api/v1/payment lines ever written to the access
-      log. Rescanned from the beginning on every collection cycle.
     enabled: true
     collector: log
     key: "app.log.payment.calls.total"
     value_type: int
     unit: "calls"
     delivery: batch
-    importance: normal
     timeout_seconds: 60
     error_policy: skip
-    tags: [app, log]
     params:
       path: "/var/log/myapp/access.log"
       match: "POST /api/v1/payment"

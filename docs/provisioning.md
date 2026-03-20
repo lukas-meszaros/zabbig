@@ -1,52 +1,45 @@
-# Provisioning Zabbix — provision_zabbix.py
+# Provisioning Zabbix — zabbix_update/
 
-`provision_zabbix.py` uses the Zabbix JSON-RPC API to create the monitoring host, host group, and all required trapper items in Zabbix. It is **idempotent** — safe to run multiple times; existing objects are updated rather than recreated.
-
----
-
-## What It Creates
-
-| Object | Source |
-|---|---|
-| Host group | Value of `zabbix.host_group` in `client.yaml` |
-| Host | Value of `zabbix.host_name` in `client.yaml` |
-| Trapper items | One per metric in `metrics.yaml` (all defined by default) |
-| Self-monitoring items | Five `zabbig.client.*` items for client health monitoring |
-
-**Self-monitoring items:**
-
-| Key | Description |
-|---|---|
-| `zabbig.client.run.success` | `1` = run succeeded, `0` = fatal error |
-| `zabbig.client.collectors.total` | Total metrics attempted in the last run |
-| `zabbig.client.collectors.failed` | Metrics that failed or timed out |
-| `zabbig.client.duration_ms` | Total run duration in milliseconds |
-| `zabbig.client.metrics.sent` | Values accepted by Zabbix in the last run |
+The `zabbix_update/` directory contains scripts that use the Zabbix JSON-RPC API to set up all monitoring objects. All scripts are **idempotent** — safe to run multiple times.
 
 ---
 
-## Running the Script
+## Scripts
 
-### From inside the container (recommended)
+| Script | What it creates |
+|---|---|
+| `create_template.py` | Zabbix template + trapper items on the template |
+| `create_trapper_items.py` | Host group, host, and trapper items directly on a host |
+| `create_triggers.py` | Triggers (on a template or host) |
+| `create_dashboard.py` | A host-scoped overview dashboard |
+
+Run scripts from the `zabbix_update/` directory.
+
+---
+
+## Typical Setup Order
 
 ```bash
-docker exec zabbig-client python3 provision_zabbix.py --config client.docker.yaml
+cd zabbix_update
+
+# 1. Create items on the host (replaces the old provision_zabbix.py)
+python3 create_trapper_items.py --config ../zabbig_client/client.yaml
+
+# 2. Optionally create a shared template
+python3 create_template.py
+
+# 3. Create triggers (on template by default)
+python3 create_triggers.py --target template
+
+# 4. Create the overview dashboard for a host
+python3 create_dashboard.py --host prod-server-01
 ```
 
-### From the host
+### From inside the Docker container
 
 ```bash
-cd zabbig_client
-python3 provision_zabbix.py --config client.yaml
+docker exec zabbig-client bash -c "cd /app/../zabbix_update && python3 create_trapper_items.py --config /app/client.docker.yaml"
 ```
-
-The API URL is derived automatically from `zabbix.server_host` in `client.yaml`:
-
-```
-http://<server_host>:8080/api_jsonrpc.php
-```
-
-Override this with `--api-url` if your setup uses a different port or path.
 
 ---
 
@@ -54,7 +47,7 @@ Override this with `--api-url` if your setup uses a different port or path.
 
 API credentials are required only for provisioning — `run.py` does not need them.
 
-Credentials are resolved in this priority order:
+Credentials are resolved in this priority order for all scripts:
 
 1. CLI flags (`--user`, `--password`)
 2. Environment variables (`ZABBIX_ADMIN_USER`, `ZABBIX_ADMIN_PASSWORD`)
@@ -64,41 +57,87 @@ The password prompt is hidden (no echo). The username prompt defaults to `Admin`
 
 ---
 
-## All CLI Flags
+## Common Flags (all scripts)
 
 | Flag | Default | Description |
 |---|---|---|
-| `--config PATH` | `client.yaml` | Path to client config file |
-| `--metrics PATH` | `metrics.yaml` | Path to metrics definitions file |
-| `--api-url URL` | derived from `server_host` | Zabbix JSON-RPC endpoint URL |
+| `--api-url URL` | derived from `--server-host` | Zabbix JSON-RPC endpoint URL |
+| `--server-host HOST` | `127.0.0.1` | Derives API URL as `http://<HOST>:8080/api_jsonrpc.php` |
 | `--user USER` | prompted if not set | Zabbix admin username |
 | `--password PASS` | prompted if not set | Zabbix admin password |
+| `--no-wait` | off | Skip waiting for the Zabbix web UI to become available |
+
+---
+
+## create_trapper_items.py
+
+Creates the host group, host, and all trapper items on the host directly. Reads host name and host group from `client.yaml`.
+
+| Flag | Default | Description |
+|---|---|---|
+| `--config PATH` | `../zabbig_client/client.yaml` | Path to `client.yaml` |
+| `--template PATH` | `template.yaml` | Item presentation overrides |
+| `--metrics PATH` | `../zabbig_client/metrics.yaml` | Metric definitions |
 | `--only-enabled` | off | Provision only metrics with `enabled: true` |
-| `--no-wait` | off | Skip waiting for the web UI to become available |
+
+**`--only-enabled` vs default:** By default all defined metrics are provisioned regardless of their `enabled` flag. This ensures a trapper item exists before you enable a metric — no "no item" errors. Use `--only-enabled` if you want Zabbix to only contain items for currently active metrics.
+
+**Re-running after changes:** After adding or renaming metrics in `metrics.yaml`, re-run the script. New items are created; existing ones are skipped. Items removed from `metrics.yaml` are not deleted automatically — remove them manually in the Zabbix UI.
 
 ---
 
-## `--only-enabled` vs default behaviour
+## create_template.py
 
-By default, **all defined metrics** are provisioned regardless of their `enabled` flag. This ensures a Zabbix trapper item exists and is ready to receive data whenever a metric is later enabled — you won't get a "no item" error when you turn a metric on.
+Creates a shared Zabbix template and all trapper items on it.
 
-Use `--only-enabled` if you want Zabbix to only contain items for currently active metrics.
+| Flag | Default | Description |
+|---|---|---|
+| `--template PATH` | `template.yaml` | Template + item definitions |
+| `--metrics PATH` | `../zabbig_client/metrics.yaml` | Metric definitions |
+| `--only-enabled` | off | Provision only enabled metrics |
 
 ---
 
-## Re-running After Changes
+## create_triggers.py
 
-After adding, removing, or renaming metrics in `metrics.yaml`, re-run the script. It will create any new items and update existing ones. It does **not** delete items that have been removed from `metrics.yaml` — remove those manually in the Zabbix UI if needed.
+Creates triggers from `triggers.yaml` on a template or directly on a host.
 
-```bash
-docker exec zabbig-client python3 provision_zabbix.py --config client.docker.yaml
-```
+| Flag | Default | Description |
+|---|---|---|
+| `--triggers PATH` | `triggers.yaml` | Trigger definitions |
+| `--target` | `template` | `template` or `host` |
+| `--host HOSTNAME` | — | Required when `--target host` |
+
+---
+
+## create_dashboard.py
+
+Creates or updates an overview dashboard for a specific host.
+
+| Flag | Default | Description |
+|---|---|---|
+| `--dashboard PATH` | `dashboard.yaml` | Dashboard definition |
+| `--host HOSTNAME` | required | Zabbix host name |
+
+---
+
+## Self-monitoring Items
+
+| Key | Description |
+|---|---|
+| `zabbig.client.run.success` | `1` = run succeeded, `0` = fatal error |
+| `zabbig.client.collectors.total` | Total metrics attempted in the last run |
+| `zabbig.client.collectors.failed` | Metrics that failed or timed out |
+| `zabbig.client.duration_ms` | Total run duration in milliseconds |
+| `zabbig.client.metrics.sent` | Values accepted by Zabbix in the last run |
+
+These items are defined in `template.yaml` under `self_monitoring_items` and are created by both `create_template.py` and `create_trapper_items.py`.
 
 ---
 
 ## Dependencies
 
-All dependencies are vendored in `src/` — no `pip install` is needed:
+All dependencies are vendored in `zabbig_client/src/` — no `pip install` is needed:
 
 - `requests` — HTTP calls to the Zabbix API
 - `requests` transitive deps: `urllib3`, `certifi`, `charset_normalizer`, `idna`
