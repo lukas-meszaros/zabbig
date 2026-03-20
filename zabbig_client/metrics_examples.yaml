@@ -593,6 +593,20 @@ metrics:
       mount: "/"
       mode: used_bytes
 
+  - id: disk_data_used_percent
+    # Disabled — enable if you have a separate data partition
+    enabled: false
+    collector: disk
+    key: host.disk.data.used_percent
+    value_type: float
+    unit: "%"
+    delivery: batch
+    timeout_seconds: 10
+    error_policy: skip
+    params:
+      mount: "/data"
+      mode: used_percent
+
   # ---- Inodes ------------------------------------------------------------
 
   - id: disk_root_inodes_used_percent
@@ -646,3 +660,426 @@ metrics:
     params:
       mount: "/"
       mode: inodes_total
+
+  # ---- Services ----------------------------------------------------------
+
+  - id: svc_sshd
+    enabled: true
+    collector: service
+    key: host.service.sshd
+    value_type: int
+    unit: ""
+    delivery: immediate     # service checks are sent immediately when collected
+    timeout_seconds: 8
+    error_policy: mark_failed
+    params:
+      check_mode: systemd
+      service_name: sshd
+
+  - id: svc_nginx
+    # Disable if nginx is not installed on this host
+    enabled: true
+    collector: service
+    key: host.service.nginx
+    value_type: int
+    unit: ""
+    delivery: immediate
+    timeout_seconds: 8
+    error_policy: fallback
+    fallback_value: "0"       # treat collector error the same as service down
+    params:
+      check_mode: systemd
+      service_name: nginx
+
+  - id: svc_cron_process
+    enabled: true
+    collector: service
+    key: host.service.cron.process
+    value_type: int
+    unit: ""
+    delivery: immediate
+    timeout_seconds: 8
+    error_policy: skip
+    params:
+      check_mode: process
+      process_pattern: "cron"   # matches 'cron', 'crond', etc.
+
+  # ---- Network -----------------------------------------------------------
+
+  - id: net_rx_bytes_per_sec
+    enabled: false
+    collector: network
+    key: host.net.rx_bytes_per_sec
+    value_type: float
+    unit: "B/s"
+    delivery: batch
+    timeout_seconds: 5
+    error_policy: skip
+    params:
+      interface: total
+      mode: rx_bytes_per_sec
+
+  - id: net_tx_bytes_per_sec
+    enabled: false
+    collector: network
+    key: host.net.tx_bytes_per_sec
+    value_type: float
+    unit: "B/s"
+    delivery: batch
+    timeout_seconds: 5
+    error_policy: skip
+    params:
+      interface: total
+      mode: tx_bytes_per_sec
+
+  - id: net_rx_errors
+    enabled: true
+    collector: network
+    key: host.net.rx_errors
+    value_type: int
+    unit: ""
+    delivery: batch
+    timeout_seconds: 10
+    error_policy: skip
+    params:
+      interface: total
+      mode: rx_errors
+
+  - id: net_tx_errors
+    enabled: true
+    collector: network
+    key: host.net.tx_errors
+    value_type: int
+    unit: ""
+    delivery: batch
+    timeout_seconds: 10
+    error_policy: skip
+    params:
+      interface: total
+      mode: tx_errors
+
+  - id: net_rx_dropped
+    enabled: true
+    collector: network
+    key: host.net.rx_dropped
+    value_type: int
+    unit: ""
+    delivery: batch
+    timeout_seconds: 10
+    error_policy: skip
+    params:
+      interface: total
+      mode: rx_dropped
+
+  - id: net_tx_dropped
+    enabled: true
+    collector: network
+    key: host.net.tx_dropped
+    value_type: int
+    unit: ""
+    delivery: batch
+    timeout_seconds: 10
+    error_policy: skip
+    params:
+      interface: total
+      mode: tx_dropped
+
+  - id: net_tcp_inuse
+    enabled: true
+    collector: network
+    key: host.net.tcp_inuse
+    value_type: int
+    unit: ""
+    delivery: batch
+    timeout_seconds: 10
+    error_policy: skip
+    params:
+      mode: tcp_inuse
+
+  - id: net_tcp_timewait
+    enabled: true
+    collector: network
+    key: host.net.tcp_timewait
+    value_type: int
+    unit: ""
+    delivery: batch
+    timeout_seconds: 10
+    error_policy: skip
+    params:
+      mode: tcp_timewait
+
+  - id: net_tcp_orphans
+    enabled: false
+    collector: network
+    key: host.net.tcp_orphans
+    value_type: int
+    unit: ""
+    delivery: batch
+    timeout_seconds: 10
+    error_policy: skip
+    params:
+      mode: tcp_orphans
+
+  - id: net_udp_inuse
+    enabled: false
+    collector: network
+    key: host.net.udp_inuse
+    value_type: int
+    unit: ""
+    delivery: batch
+    timeout_seconds: 10
+    error_policy: skip
+    params:
+      mode: udp_inuse
+
+  # Per-interface examples — disabled by default; set interface to match your NIC.
+
+  - id: net_eth0_rx_bytes_per_sec
+    enabled: false
+    collector: network
+    key: host.net.eth0.rx_bytes_per_sec
+    value_type: float
+    unit: "B/s"
+    delivery: batch
+    timeout_seconds: 5
+    error_policy: skip
+    params:
+      interface: eth0
+      mode: rx_bytes_per_sec
+
+  - id: net_eth0_tx_bytes_per_sec
+    enabled: false
+    collector: network
+    key: host.net.eth0.tx_bytes_per_sec
+    value_type: float
+    unit: "B/s"
+    delivery: batch
+    timeout_seconds: 5
+    error_policy: skip
+    params:
+      interface: eth0
+      mode: tx_bytes_per_sec
+
+  # ---- Log ---------------------------------------------------------------
+
+  - id: log_app_error
+    enabled: true
+    collector: log
+    key: app.log.error
+    value_type: int
+    unit: ""
+    delivery: immediate
+    timeout_seconds: 30
+    error_policy: skip
+    params:
+      path: "/var/log/myapp/app.log"
+      match: "ERROR"
+      mode: condition
+      default_value: 0
+      conditions:
+        - value: 1
+
+  - id: log_app_severity
+    enabled: true
+    collector: log
+    key: "app.log.severity"
+    value_type: int
+    unit: ""
+    delivery: immediate
+    timeout_seconds: 30
+    error_policy: skip
+    params:
+      path: "/var/log/myapp/app.log"
+      match: "WARN|ERROR|FATAL|OutOfMemory"
+      mode: condition
+      result: max
+      default_value: 0
+      conditions:
+        - when: "FATAL|OutOfMemory"
+          value: 3
+        - when: "ERROR"
+          value: 2
+        - when: "WARN"
+          value: 1
+        - value: 0
+
+  - id: log_api_response_time_max
+    enabled: true
+    collector: log
+    key: "app.log.api.response_time_max_ms"
+    value_type: float
+    unit: "ms"
+    delivery: batch
+    timeout_seconds: 30
+    error_policy: skip
+    params:
+      path: "/var/log/myapp/access.log"
+      match: "response_time="
+      mode: condition
+      result: max
+      default_value: 0
+      conditions:
+        - extract: 'response_time=(\d+(?:\.\d+)?)'
+          compare: gt
+          threshold: 2000
+          value: "$1"
+        - extract: 'response_time=(\d+(?:\.\d+)?)'
+          compare: gt
+          threshold: 500
+          value: "$1"
+        - value: 0
+
+  - id: log_payment_api_calls_total
+    enabled: true
+    collector: log
+    key: "app.log.payment.calls.total"
+    value_type: int
+    unit: "calls"
+    delivery: batch
+    timeout_seconds: 60
+    error_policy: skip
+    params:
+      path: "/var/log/myapp/access.log"
+      match: "POST /api/v1/payment"
+      mode: count
+
+  # ---- Probes ------------------------------------------------------------
+
+  # --- TCP probes ---
+
+  - id: probe_google_dns
+    # Check that Google's public DNS port is reachable (good basic connectivity
+    # test that works without HTTP — always disable on hosts with firewall rules
+    # blocking outbound UDP/TCP 53)
+    enabled: true
+    collector: probe
+    key: probe.google.dns
+    value_type: int
+    unit: ""
+    timeout_seconds: 5
+    error_policy: skip
+    params:
+      host: 8.8.8.8
+      port: 53
+      mode: tcp
+      on_success: 1
+      on_failure: 0
+      response_time_ms: true    # also sends probe.google.dns.response_time_ms
+
+  - id: probe_github_https_port
+    # Check GitHub HTTPS port is reachable — useful as an outbound HTTPS
+    # connectivity indicator
+    enabled: true
+    collector: probe
+    key: probe.github.https.port
+    value_type: int
+    unit: ""
+    timeout_seconds: 5
+    error_policy: skip
+    params:
+      host: github.com
+      port: 443
+      mode: tcp
+      on_success: 1
+      on_failure: 0
+
+  # --- HTTP status probes ---
+
+  - id: probe_github_api_up
+    # Check the GitHub REST API root returns a 2xx response.
+    # If unreachable, default_value 0 is sent.
+    enabled: true
+    collector: probe
+    key: probe.github.api.up
+    value_type: int
+    unit: ""
+    timeout_seconds: 10
+    error_policy: skip
+    params:
+      url: https://api.github.com
+      mode: http_status
+      default_value: 0
+      response_time_ms: true    # also sends probe.github.api.up.response_time_ms
+      ssl_check: true           # also sends probe.github.api.up.ssl_check
+      conditions:
+        - when: "^2"
+          value: 1
+        - when: "^4"
+          value: 2
+        - when: "^5"
+          value: 3
+        - value: 0
+
+  - id: probe_httpbin_status_200
+    # Verify httpbin.org returns 200 — a simple public HTTP testing target.
+    # Replace with your own service URL for real monitoring.
+    enabled: true
+    collector: probe
+    key: probe.httpbin.status.200
+    value_type: int
+    unit: ""
+    timeout_seconds: 10
+    error_policy: skip
+    params:
+      url: https://httpbin.org/status/200
+      mode: http_status
+      default_value: 0
+      response_time_ms: false
+      conditions:
+        - when: "^2"
+          value: 1
+        - value: 0
+
+  # --- HTTP body probes ---
+
+  - id: probe_github_api_body
+    # Verify the GitHub API root returns JSON with expected content.
+    # The response body contains "current_user_url" which confirms it is the
+    # real API and not a proxy or CDN error page.
+    enabled: true
+    collector: probe
+    key: probe.github.api.body
+    value_type: int
+    unit: ""
+    timeout_seconds: 10
+    error_policy: skip
+    params:
+      url: https://api.github.com
+      mode: http_body
+      method: GET
+      headers:
+        Accept: "application/vnd.github+json"
+        User-Agent: "zabbig-probe/1.0"
+      match: '"current_user_url"'
+      result: last
+      default_value: 0
+      response_time_ms: false
+      ssl_check: true           # also sends probe.github.api.body.ssl_check
+      conditions:
+        - when: '"current_user_url"'
+          value: 1
+        - value: 0
+
+  - id: probe_httpbin_json_body
+    # Probe httpbin.org/json — checks that the response body contains expected
+    # JSON structure. Replace with your own health-check endpoint.
+    # httpbin.org/json returns { "slideshow": { "author": "Yours Truly", ... } }
+    enabled: true
+    collector: probe
+    key: probe.httpbin.json.body
+    value_type: int
+    unit: ""
+    timeout_seconds: 10
+    error_policy: skip
+    params:
+      url: https://httpbin.org/json
+      mode: http_body
+      match: '"slideshow"'
+      result: last
+      default_value: 0
+      max_response_bytes: 8192
+      response_time_ms: true
+      conditions:
+        - when: '"author"'
+          value: 1
+        - value: 0
