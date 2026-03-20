@@ -117,7 +117,8 @@ Creates or updates an overview dashboard for a specific host.
 | Flag | Default | Description |
 |---|---|---|
 | `--dashboard PATH` | `dashboard.yaml` | Dashboard definition |
-| `--host HOSTNAME` | required | Zabbix host name |
+| `--host HOSTNAME` | from `client.yaml` | Zabbix host name (falls back to `zabbix.host_name` in `client.yaml`) |
+| `--config PATH` | `../zabbig_client/client.yaml` | Path to `client.yaml` — reads `server_host` and `host_name` |
 
 ---
 

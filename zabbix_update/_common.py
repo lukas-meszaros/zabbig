@@ -265,15 +265,15 @@ class ZabbixAPI:
     # -- Items (host or template) --------------------------------------------
 
     def get_item_id(self, host_or_template_id: str, key: str, on_template: bool = False) -> Optional[str]:
-        method = "item.get"
-        id_field = "templateids" if on_template else "hostids"
-        r = self._call(method, {id_field: [host_or_template_id], "filter": {"key_": [key]}, "output": ["itemid"]})
+        # Zabbix item.get accepts hostids for both hosts and templates
+        r = self._call("item.get", {"hostids": [host_or_template_id], "filter": {"key_": [key]}, "output": ["itemid"]})
         return r[0]["itemid"] if r else None
 
     def ensure_item(self, host_or_template_id: str, item_def: dict, on_template: bool = False) -> str:
         key = item_def["key_"]
         iid = self.get_item_id(host_or_template_id, key, on_template)
-        id_field = "templateid" if on_template else "hostid"
+        # Zabbix item.create uses hostid for both hosts and templates
+        id_field = "hostid"
         if iid:
             self._call("item.update", {"itemid": iid, "tags": item_def.get("tags", [])})
             log.info("  Item '%s' already exists (id=%s) — tags synced", key, iid)

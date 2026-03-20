@@ -10,16 +10,13 @@ No code changes are needed to add a metric for an existing collector. Edit `metr
 
 ```yaml
 - id: disk_backup_used_percent
-  name: Backup volume used percent
   enabled: true
   collector: disk
   key: host.disk.backup.used_percent
   value_type: float
   unit: "%"
   delivery: batch
-  importance: high
   error_policy: skip
-  tags: [system, disk]
   params:
     mount: "/backup"
     mode: used_percent

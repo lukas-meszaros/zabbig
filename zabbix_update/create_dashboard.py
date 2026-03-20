@@ -27,6 +27,8 @@ Usage
 """
 
 import os
+import random
+import string
 import sys
 
 from _common import (
@@ -77,6 +79,23 @@ def _resolve_item_ids(api: ZabbixAPI, host_id: str, keys: list[str]) -> list[str
     return ids
 
 
+def _resolve_item_names(api: ZabbixAPI, host_id: str, keys: list[str]) -> dict:
+    """Return {key_: name} mapping for *keys* on *host_id*."""
+    if not keys:
+        return {}
+    result = api._call("item.get", {
+        "output":  ["key_", "name"],
+        "hostids": [host_id],
+        "filter":  {"key_": keys},
+    })
+    return {r["key_"]: r["name"] for r in result}
+
+
+def _random_ref() -> str:
+    """Return a unique 5-character widget reference string."""
+    return ''.join(random.choices(string.ascii_uppercase + string.digits, k=5))
+
+
 # ---------------------------------------------------------------------------
 # Widget builders
 # ---------------------------------------------------------------------------
@@ -89,31 +108,28 @@ def _build_item_widget(widget: dict, host_id: str, api: ZabbixAPI,
     fields = []
     if item_ids:
         fields.append({"type": 4, "name": "itemid",
-                        "value": {"host": "", "key": "", "itemid": item_ids[0]}})
-    fields.append({"type": 0, "name": "show_description", "value": "1"})
-    fields.append({"type": 0, "name": "dynamic",          "value": "0"})
+                        "value": int(item_ids[0])})
+    fields.append({"type": 0, "name": "show_description", "value": 1})
+    fields.append({"type": 0, "name": "dynamic",          "value": 0})
     return _wrap_widget(widget, x, y, "item", fields)
 
 
-def _build_graph_widget(widget: dict, host_id: str, api: ZabbixAPI,
-                        x: int, y: int) -> dict:
-    """Build a Zabbix 'svggraph' widget payload."""
-    keys     = widget.get("keys", [])
-    item_ids = _resolve_item_ids(api, host_id, keys)
+def _build_graph_widget(widget: dict, host_name: str, host_id: str,
+                        x: int, y: int, api: ZabbixAPI) -> dict:
+    """Build a Zabbix 'svggraph' widget payload using host+item name patterns."""
+    keys = widget.get("keys", [])
+    item_names = _resolve_item_names(api, host_id, keys)
     ds_fields = []
-    for idx, iid in enumerate(item_ids):
-        ds_fields.append({
-            "type":  4,
-            "name":  f"ds.itemids.{idx}.0",
-            "value": {"host": "", "key": "", "itemid": iid},
-        })
-        ds_fields.append({"type": 0, "name": f"ds.type.{idx}", "value": "0"})
-        ds_fields.append({"type": 1, "name": f"ds.color.{idx}",
-                           "value": _default_color(idx)})
+    for idx, key in enumerate(keys):
+        name = item_names.get(key, key)
+        ds_fields += [
+            {"type": 1, "name": f"ds.{idx}.hosts.0", "value": host_name},
+            {"type": 1, "name": f"ds.{idx}.items.0", "value": name},
+            {"type": 1, "name": f"ds.{idx}.color",   "value": _default_color(idx)},
+        ]
     base_fields = [
-        {"type": 0, "name": "source_type", "value": "1"},   # SIMPLE_ITEMS
-        {"type": 0, "name": "show_legend",  "value": "1"},
-        {"type": 0, "name": "show_working_time", "value": "1"},
+        {"type": 0, "name": "righty",    "value": 0},
+        {"type": 1, "name": "reference", "value": _random_ref()},
     ]
     return _wrap_widget(widget, x, y, "svggraph", base_fields + ds_fields)
 
@@ -121,8 +137,8 @@ def _build_graph_widget(widget: dict, host_id: str, api: ZabbixAPI,
 def _build_problems_widget(widget: dict, x: int, y: int) -> dict:
     """Build a Zabbix 'problems' widget payload."""
     fields = [
-        {"type": 0, "name": "show_lines", "value": "25"},
-        {"type": 0, "name": "sort_triggers", "value": "0"},
+        {"type": 0, "name": "show_lines",   "value": 25},
+        {"type": 0, "name": "sort_triggers", "value": 3},   # 3 = Last change (recent first)
     ]
     return _wrap_widget(widget, x, y, "problems", fields)
 
@@ -130,8 +146,8 @@ def _build_problems_widget(widget: dict, x: int, y: int) -> dict:
 def _build_clock_widget(widget: dict, x: int, y: int) -> dict:
     """Build a Zabbix 'clock' widget payload."""
     fields = [
-        {"type": 0, "name": "time_type", "value": "0"},  # HOST_TIME
-        {"type": 0, "name": "clock_type", "value": "0"},  # DIGITAL
+        {"type": 0, "name": "time_type",  "value": 0},  # HOST_TIME
+        {"type": 0, "name": "clock_type", "value": 0},  # DIGITAL
     ]
     return _wrap_widget(widget, x, y, "clock", fields)
 
@@ -162,11 +178,11 @@ def _default_color(idx: int) -> str:
 # Page builder
 # ---------------------------------------------------------------------------
 
-def _build_page(page_def: dict, host_id: str, api: ZabbixAPI) -> dict:
-    widgets      = page_def.get("widgets", [])
-    built        = []
-    x, y         = 0, 0
-    row_height   = 0
+def _build_page(page_def: dict, host_id: str, host_name: str, api: ZabbixAPI) -> dict:
+    widgets    = page_def.get("widgets", [])
+    built      = []
+    x, y       = 0, 0
+    row_height = 0
 
     for w in widgets:
         w_width  = w.get("width",  6)
@@ -174,8 +190,8 @@ def _build_page(page_def: dict, host_id: str, api: ZabbixAPI) -> dict:
 
         # Wrap to next row if this widget doesn't fit
         if x + w_width > _GRID_WIDTH:
-            x        = 0
-            y       += row_height
+            x          = 0
+            y         += row_height
             row_height = 0
 
         w_type = w.get("type", "graph")
@@ -183,7 +199,7 @@ def _build_page(page_def: dict, host_id: str, api: ZabbixAPI) -> dict:
                  w_type, w.get("title", ""), x, y, w_width, w_height)
 
         if w_type == "graph":
-            entry = _build_graph_widget(w, host_id, api, x, y)
+            entry = _build_graph_widget(w, host_name, host_id, x, y, api)
         elif w_type == "plain_value":
             entry = _build_item_widget(w, host_id, api, x, y)
         elif w_type == "problems":
@@ -225,7 +241,7 @@ def run(api: ZabbixAPI, dash_data: dict, host_name: str) -> None:
     pages     = []
     for page_def in pages_def:
         log.info("  Building page: %s", page_def.get("name", ""))
-        pages.append(_build_page(page_def, host_id, api))
+        pages.append(_build_page(page_def, host_id, host_name, api))
 
     # Check for existing dashboard
     existing = api._call("dashboard.get", {
@@ -236,7 +252,7 @@ def run(api: ZabbixAPI, dash_data: dict, host_name: str) -> None:
     payload = {
         "name":           dash_name,
         "display_period": 30,
-        "auto_start":     1,
+        "auto_start":     0,
         "pages":          pages,
     }
 

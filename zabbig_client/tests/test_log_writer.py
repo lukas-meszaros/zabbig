@@ -20,6 +20,7 @@ Commands:
   write-warn        Append 1 WARN line to --app-log
   write-error       Append 1 ERROR line to --app-log
   write-fatal       Append 1 FATAL line to --app-log
+  write-all         Append one of each severity (ok/warn/error/fatal) + 10 API lines
   write-api         Append 10 API call lines to --access-log
   write-flood       Append 50 mixed lines to both logs (stress test)
   rotate-app        Rename --app-log to <path>.1 (simulate rotation)
@@ -35,6 +36,7 @@ Default paths (match metrics.yaml examples):
   --access-log  /var/log/myapp/access.log
 
 Examples:
+  python3 tests/test_log_writer.py write-all
   python3 tests/test_log_writer.py write-api
   python3 tests/test_log_writer.py write-fatal
   python3 tests/test_log_writer.py demo
@@ -96,6 +98,17 @@ def cmd_write_error(app_log: str) -> None:
 def cmd_write_fatal(app_log: str) -> None:
     print("[write-fatal] Writing 1 FATAL line …")
     _write(app_log, [f"{_ts()} [FATAL] OutOfMemory: unable to allocate 512 MB"])
+
+
+def cmd_write_all(app_log: str, access_log: str) -> None:
+    """Write one entry of every severity level plus API calls."""
+    print("[write-all] Writing ok + warn + error + fatal to app log …")
+    cmd_write_ok(app_log)
+    cmd_write_warn(app_log)
+    cmd_write_error(app_log)
+    cmd_write_fatal(app_log)
+    print("[write-all] Writing 10 API lines to access log …")
+    cmd_write_api(access_log)
 
 
 def cmd_write_api(access_log: str, count: int = 10) -> None:
@@ -376,6 +389,7 @@ def main() -> None:
         "command",
         choices=[
             "write-ok", "write-warn", "write-error", "write-fatal",
+            "write-all",
             "write-api", "write-flood",
             "rotate-app", "rotate-access",
             "truncate-app", "truncate-access",
@@ -390,6 +404,7 @@ def main() -> None:
         "write-warn":     lambda: cmd_write_warn(args.app_log),
         "write-error":    lambda: cmd_write_error(args.app_log),
         "write-fatal":    lambda: cmd_write_fatal(args.app_log),
+        "write-all":      lambda: cmd_write_all(args.app_log, args.access_log),
         "write-api":      lambda: cmd_write_api(args.access_log),
         "write-flood":    lambda: cmd_write_flood(args.app_log, args.access_log),
         "rotate-app":     lambda: cmd_rotate(args.app_log, "app"),

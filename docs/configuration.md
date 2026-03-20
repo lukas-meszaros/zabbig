@@ -310,14 +310,6 @@ id: disk_root_used_percent
 id: log_app_error
 ```
 
-#### `name`
-
-Short human-readable label for log output. Not sent to Zabbix.
-
-#### `description`
-
-Longer documentation string. Not used at runtime.
-
 #### `enabled`
 
 `true` (default) or `false`. Disabled metrics are skipped entirely; the corresponding Zabbix item goes stale until re-enabled.
@@ -366,19 +358,6 @@ What to do when a collector fails or times out:
 | `skip` | Silently discard. Nothing sent to Zabbix. |
 | `fallback` | Send `fallback_value` to Zabbix. Requires `fallback_value` to be set. |
 | `mark_failed` | Log an error, count as failed in run summary. Nothing sent. |
-
-#### `importance`
-
-Informational label for log output: `low`, `normal`, `high`, `critical`. Controls log prominence but has no runtime effect.
-
-#### `tags`
-
-List of string labels for filtering. No fixed schema.
-
-```yaml
-tags: [system, cpu]
-tags: [service, nginx, web]
-```
 
 ---
 
