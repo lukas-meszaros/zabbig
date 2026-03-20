@@ -488,7 +488,7 @@ metrics:
 
   - id: load_avg_15
     # Disabled — enables: false means this metric is skipped entirely
-    enabled: false
+    enabled: true
     collector: cpu
     key: host.cpu.load15
     value_type: float
@@ -595,7 +595,7 @@ metrics:
 
   - id: disk_data_used_percent
     # Disabled — enable if you have a separate data partition
-    enabled: false
+    enabled: true
     collector: disk
     key: host.disk.data.used_percent
     value_type: float
@@ -636,7 +636,7 @@ metrics:
       mode: inodes_free
 
   - id: disk_root_inodes_used
-    enabled: false
+    enabled: true
     collector: disk
     key: host.disk.root.inodes_used
     value_type: int
@@ -649,7 +649,7 @@ metrics:
       mode: inodes_used
 
   - id: disk_root_inodes_total
-    enabled: false
+    enabled: true
     collector: disk
     key: host.disk.root.inodes_total
     value_type: int
@@ -707,7 +707,7 @@ metrics:
   # ---- Network -----------------------------------------------------------
 
   - id: net_rx_bytes_per_sec
-    enabled: false
+    enabled: true
     collector: network
     key: host.net.rx_bytes_per_sec
     value_type: float
@@ -720,7 +720,7 @@ metrics:
       mode: rx_bytes_per_sec
 
   - id: net_tx_bytes_per_sec
-    enabled: false
+    enabled: true
     collector: network
     key: host.net.tx_bytes_per_sec
     value_type: float
@@ -809,7 +809,7 @@ metrics:
       mode: tcp_timewait
 
   - id: net_tcp_orphans
-    enabled: false
+    enabled: true
     collector: network
     key: host.net.tcp_orphans
     value_type: int
@@ -821,7 +821,7 @@ metrics:
       mode: tcp_orphans
 
   - id: net_udp_inuse
-    enabled: false
+    enabled: true
     collector: network
     key: host.net.udp_inuse
     value_type: int
@@ -835,7 +835,7 @@ metrics:
   # Per-interface examples — disabled by default; set interface to match your NIC.
 
   - id: net_eth0_rx_bytes_per_sec
-    enabled: false
+    enabled: true
     collector: network
     key: host.net.eth0.rx_bytes_per_sec
     value_type: float
@@ -848,7 +848,7 @@ metrics:
       mode: rx_bytes_per_sec
 
   - id: net_eth0_tx_bytes_per_sec
-    enabled: false
+    enabled: true
     collector: network
     key: host.net.eth0.tx_bytes_per_sec
     value_type: float

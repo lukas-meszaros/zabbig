@@ -488,7 +488,7 @@ metrics:
 
   - id: load_avg_15
     # Disabled — enables: false means this metric is skipped entirely
-    enabled: false
+    enabled: true
     collector: cpu
     key: host.cpu.load15
     value_type: float
@@ -622,7 +622,7 @@ metrics:
       mode: inodes_free
 
   - id: disk_root_inodes_used
-    enabled: false
+    enabled: true
     collector: disk
     key: host.disk.root.inodes_used
     value_type: int
@@ -635,7 +635,7 @@ metrics:
       mode: inodes_used
 
   - id: disk_root_inodes_total
-    enabled: false
+    enabled: true
     collector: disk
     key: host.disk.root.inodes_total
     value_type: int
