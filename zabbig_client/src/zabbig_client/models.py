@@ -29,7 +29,7 @@ VALID_DELIVERY = {DELIVERY_BATCH, DELIVERY_IMMEDIATE}
 VALID_ERROR_POLICY = {ERROR_POLICY_SKIP, ERROR_POLICY_FALLBACK, ERROR_POLICY_MARK_FAILED}
 VALID_VALUE_TYPES = {"int", "float", "string", "text"}
 VALID_IMPORTANCE = {"low", "normal", "high", "critical"}
-VALID_COLLECTORS = {"cpu", "memory", "disk", "service", "network", "log"}
+VALID_COLLECTORS = {"cpu", "memory", "disk", "service", "network", "log", "probe"}
 
 
 # ---------------------------------------------------------------------------

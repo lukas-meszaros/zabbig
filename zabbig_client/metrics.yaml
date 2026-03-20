@@ -102,6 +102,94 @@
 #                              Example: proc_root: "/host/proc"
 #
 # -----------------------------------------------------------------------------
+# DEFAULTS — max_response_bytes
+# -----------------------------------------------------------------------------
+#   max_response_bytes integer  Maximum bytes read from an HTTP response body
+#                              before the stream is closed. Applies only to
+#                              probe collector in http_body mode.
+#                              Override per-metric under params.
+#                              Default: 65536 (64 KiB)
+#
+# -----------------------------------------------------------------------------
+# PARAMS — probe collector
+# -----------------------------------------------------------------------------
+# Active connectivity checks against TCP ports and HTTP(S) endpoints.
+# The probe always completes and returns a value — connection failures map
+# to `on_failure` / `default_value` rather than raising an error.
+#
+#   mode   string   REQUIRED
+#          tcp         — TCP socket connection check.
+#                        Returns `on_success` when port is reachable,
+#                        `on_failure` when not (refused or timeout).
+#          http_status — HTTP request. Evaluates the numeric status code
+#                        (as a string) through `conditions`. Without
+#                        `conditions`, returns the raw status code integer.
+#          http_body   — HTTP request. Evaluates response body lines through
+#                        the same conditions engine as the log collector.
+#                        Pre-filter with `match` before condition evaluation.
+#
+# --- tcp mode params ---
+#   host            string   REQUIRED. Hostname or IP address to connect to.
+#   port            integer  REQUIRED. TCP port number.
+#   on_success      any      Value when port is reachable.  Default: 1
+#   on_failure      any      Value when port is refused or times out. Default: 0
+#
+# --- http mode params (http_status and http_body) ---
+#   url             string   REQUIRED. Full URL including scheme
+#                            (http:// or https://).
+#   method          string   HTTP method. Default: GET
+#   headers         map      Optional request headers. Each key/value pair
+#                            is sent as an HTTP header.
+#                            Example:
+#                              headers:
+#                                Authorization: "Bearer token123"
+#                                Accept: "application/json"
+#   default_value   any      Value sent when the connection fails or no
+#                            condition matches. Default: 0
+#
+# --- http_status mode params ---
+#   conditions      list     Ordered condition list. The status code is
+#                            evaluated as a string (e.g. "200", "503").
+#                            Uses the same condition engine as the log
+#                            collector (when: / extract: / catch-all).
+#                            Without conditions, the raw integer status
+#                            code is returned.
+#
+# --- http_body mode params ---
+#   match           string   Optional Python regex. Only lines containing
+#                            a match are forwarded to condition evaluation.
+#                            If provided and no line matches, default_value
+#                            is returned. Omit to pass all lines.
+#   result          string   How to reduce multiple per-line values:
+#                            last (default) | first | max | min
+#   conditions      list     Same engine and syntax as log collector.
+#                            Evaluated per-line against body lines that
+#                            pass `match`. Without conditions, returns 1
+#                            when any matching line exists.
+#   max_response_bytes integer
+#                            Cap on bytes read from the response body.
+#                            Default: defaults.max_response_bytes (65536)
+#
+# --- sub-keys (all modes) ---
+#   response_time_ms bool    false (default). When true, also sends a Zabbix
+#                            item to <key>.response_time_ms with the TCP or
+#                            HTTP round-trip time in milliseconds.
+#                            Reports 0 on probe failure.
+#
+#   ssl_check        bool    false (default). http modes only. When true,
+#                            also sends a Zabbix item to <key>.ssl_check:
+#                              1  =  certificate valid and trusted
+#                              0  =  certificate invalid (expired, wrong host)
+#                              2  =  unknown (handshake failed / unreachable)
+#                            Checked via a separate TLS handshake using the
+#                            system default trust store. The main HTTP request
+#                            always uses verify=False so the probe completes
+#                            regardless of certificate state.
+#
+#   NOTE: Sub-key items (<key>.response_time_ms, <key>.ssl_check) must be
+#   configured as separate Trapper items in Zabbix with matching keys.
+#
+# -----------------------------------------------------------------------------
 # PARAMS — cpu collector
 # -----------------------------------------------------------------------------
 #   mode   string   REQUIRED
@@ -327,6 +415,7 @@ defaults:
   delivery: batch
   timeout_seconds: 10
   error_policy: skip
+  max_response_bytes: 65536     # max HTTP body bytes for probe http_body mode
 
 # ---------------------------------------------------------------------------
 # Collector-level defaults — override global defaults for a specific collector
@@ -350,6 +439,9 @@ collector_defaults:
   log:
     timeout_seconds: 60
     delivery: batch
+  probe:
+    timeout_seconds: 10
+    delivery: immediate     # probes are time-sensitive; send as soon as collected
 
 # ---------------------------------------------------------------------------
 # Metrics
@@ -850,3 +942,147 @@ metrics:
       path: "/var/log/myapp/access.log"
       match: "POST /api/v1/payment"
       mode: count
+
+  # ---- Probes ------------------------------------------------------------
+  # Each probe below requires a matching Trapper item in Zabbix.
+  # Sub-key items (.response_time_ms, .ssl_check) need their own Trapper items.
+  # All probes use delivery: immediate (from collector_defaults.probe).
+
+  # --- TCP probes ---
+
+  - id: probe_google_dns
+    # Check that Google's public DNS port is reachable (good basic connectivity
+    # test that works without HTTP — always disable on hosts with firewall rules
+    # blocking outbound UDP/TCP 53)
+    enabled: true
+    collector: probe
+    key: probe.google.dns
+    value_type: int
+    unit: ""
+    timeout_seconds: 5
+    error_policy: skip
+    params:
+      host: 8.8.8.8
+      port: 53
+      mode: tcp
+      on_success: 1
+      on_failure: 0
+      response_time_ms: true    # also sends probe.google.dns.response_time_ms
+
+  - id: probe_github_https_port
+    # Check GitHub HTTPS port is reachable — useful as an outbound HTTPS
+    # connectivity indicator
+    enabled: true
+    collector: probe
+    key: probe.github.https.port
+    value_type: int
+    unit: ""
+    timeout_seconds: 5
+    error_policy: skip
+    params:
+      host: github.com
+      port: 443
+      mode: tcp
+      on_success: 1
+      on_failure: 0
+
+  # --- HTTP status probes ---
+
+  - id: probe_github_api_up
+    # Check the GitHub REST API root returns a 2xx response.
+    # If unreachable, default_value 0 is sent.
+    enabled: true
+    collector: probe
+    key: probe.github.api.up
+    value_type: int
+    unit: ""
+    timeout_seconds: 10
+    error_policy: skip
+    params:
+      url: https://api.github.com
+      mode: http_status
+      default_value: 0
+      response_time_ms: true    # also sends probe.github.api.up.response_time_ms
+      ssl_check: true           # also sends probe.github.api.up.ssl_check
+      conditions:
+        - when: "^2"
+          value: 1
+        - when: "^4"
+          value: 2
+        - when: "^5"
+          value: 3
+        - value: 0
+
+  - id: probe_httpbin_status_200
+    # Verify httpbin.org returns 200 — a simple public HTTP testing target.
+    # Replace with your own service URL for real monitoring.
+    enabled: false
+    collector: probe
+    key: probe.httpbin.status.200
+    value_type: int
+    unit: ""
+    timeout_seconds: 10
+    error_policy: skip
+    params:
+      url: https://httpbin.org/status/200
+      mode: http_status
+      default_value: 0
+      response_time_ms: false
+      conditions:
+        - when: "^2"
+          value: 1
+        - value: 0
+
+  # --- HTTP body probes ---
+
+  - id: probe_github_api_body
+    # Verify the GitHub API root returns JSON with expected content.
+    # The response body contains "current_user_url" which confirms it is the
+    # real API and not a proxy or CDN error page.
+    enabled: true
+    collector: probe
+    key: probe.github.api.body
+    value_type: int
+    unit: ""
+    timeout_seconds: 10
+    error_policy: skip
+    params:
+      url: https://api.github.com
+      mode: http_body
+      method: GET
+      headers:
+        Accept: "application/vnd.github+json"
+        User-Agent: "zabbig-probe/1.0"
+      match: '"current_user_url"'
+      result: last
+      default_value: 0
+      response_time_ms: false
+      ssl_check: true           # also sends probe.github.api.body.ssl_check
+      conditions:
+        - when: '"current_user_url"'
+          value: 1
+        - value: 0
+
+  - id: probe_httpbin_json_body
+    # Probe httpbin.org/json — checks that the response body contains expected
+    # JSON structure. Replace with your own health-check endpoint.
+    # httpbin.org/json returns { "slideshow": { "author": "Yours Truly", ... } }
+    enabled: false
+    collector: probe
+    key: probe.httpbin.json.body
+    value_type: int
+    unit: ""
+    timeout_seconds: 10
+    error_policy: skip
+    params:
+      url: https://httpbin.org/json
+      mode: http_body
+      match: '"slideshow"'
+      result: last
+      default_value: 0
+      max_response_bytes: 8192
+      response_time_ms: true
+      conditions:
+        - when: '"author"'
+          value: 1
+        - value: 0

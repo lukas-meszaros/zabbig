@@ -57,7 +57,7 @@ async def run_all_collectors(
     proc_root = config.runtime.proc_root
     state_dir = config.state.directory
 
-    async def run_one(metric: MetricDef) -> MetricResult:
+    async def run_one(metric: MetricDef) -> List[MetricResult]:
         async with semaphore:
             # Inject the global proc_root into params if not overridden per-metric.
             if "proc_root" not in metric.params:
@@ -77,12 +77,26 @@ async def run_all_collectors(
                     collector.collect(metric),
                     timeout=metric.timeout_seconds,
                 )
-                result.duration_ms = (time.monotonic() - t0) * 1000
-                log.debug(
-                    "Collected %s = %s  (%.1fms)",
-                    metric.key, result.value, result.duration_ms
-                )
-                return result
+                duration = (time.monotonic() - t0) * 1000
+                # Collectors may return a list (e.g. probe sub-keys) or a single result.
+                if isinstance(result, list):
+                    for r in result:
+                        r.duration_ms = duration
+                    log.debug(
+                        "Collected %s = %s  (%.1fms) [%d result(s)]",
+                        metric.key,
+                        result[0].value if result else None,
+                        duration,
+                        len(result),
+                    )
+                    return result
+                else:
+                    result.duration_ms = duration
+                    log.debug(
+                        "Collected %s = %s  (%.1fms)",
+                        metric.key, result.value, result.duration_ms
+                    )
+                    return [result]
             except asyncio.TimeoutError:
                 duration = (time.monotonic() - t0) * 1000
                 log.warning(
@@ -90,7 +104,7 @@ async def run_all_collectors(
                     metric.id, metric.key, duration
                 )
                 raw = MetricResult.make_timeout(metric, duration)
-                return _apply_error_policy(raw, metric)
+                return [_apply_error_policy(raw, metric)]
             except Exception as exc:
                 duration = (time.monotonic() - t0) * 1000
                 log.warning(
@@ -98,7 +112,7 @@ async def run_all_collectors(
                     metric.id, metric.key, exc, duration
                 )
                 raw = MetricResult.make_error(metric, exc, duration)
-                return _apply_error_policy(raw, metric)
+                return [_apply_error_policy(raw, metric)]
 
     # Launch all tasks immediately (they queue behind the semaphore internally)
     immediate_tasks = [asyncio.create_task(run_one(m)) for m in immediate_metrics]
@@ -108,7 +122,8 @@ async def run_all_collectors(
     immediate_results: List[MetricResult] = []
     if immediate_tasks:
         gathered = await asyncio.gather(*immediate_tasks, return_exceptions=False)
-        immediate_results.extend(gathered)
+        for group in gathered:
+            immediate_results.extend(group)
 
     # --- Batch results: bounded by batch_collection_window_seconds ---
     batch_results: List[MetricResult] = []
@@ -119,7 +134,8 @@ async def run_all_collectors(
                 asyncio.gather(*batch_tasks, return_exceptions=False),
                 timeout=window,
             )
-            batch_results.extend(gathered)
+            for group in gathered:
+                batch_results.extend(group)
         except asyncio.TimeoutError:
             log.warning(
                 "Batch collection window (%.0fs) expired — cancelling unfinished tasks",
@@ -128,7 +144,8 @@ async def run_all_collectors(
             for metric, task in zip(batch_metrics, batch_tasks):
                 if task.done():
                     try:
-                        batch_results.append(task.result())
+                        for r in task.result():
+                            batch_results.append(r)
                     except Exception as exc:
                         raw = MetricResult.make_error(metric, exc)
                         batch_results.append(_apply_error_policy(raw, metric))
