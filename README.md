@@ -99,6 +99,7 @@ docker exec zabbig-client python3 run.py --config client.docker.yaml
 | [docs/collector-log.md](docs/collector-log.md) | Log collector — condition and count modes, all params |
 | [docs/collector-probe.md](docs/collector-probe.md) | Probe collector — TCP/HTTP active endpoint checks |
 | [docs/adding-metrics.md](docs/adding-metrics.md) | How to add a new metric or a new collector |
+| [docs/testing-pytest.md](docs/testing-pytest.md) | Automated test suite — setup, running, patterns, writing new tests |
 
 ---
 
