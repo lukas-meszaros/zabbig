@@ -85,8 +85,9 @@ def run(
             metrics_config_path,
             strict=client_config.features.strict_config_validation,
         )
-    except (ConfigError, FileNotFoundError) as exc:
+    except Exception as exc:
         log.error("Cannot load metrics config '%s': %s", metrics_config_path, exc)
+        _send_fatal_failure(client_config)
         return 2
 
     # --- Filter enabled metrics ---
@@ -122,6 +123,32 @@ def run(
     save_state(client_config, summary)
     _log_summary(summary)
     return exit_code
+
+
+# ---------------------------------------------------------------------------
+# Fatal-failure notifier
+# ---------------------------------------------------------------------------
+
+def _send_fatal_failure(config: ClientConfig) -> None:
+    """
+    Send zabbig.client.run.success=0 to Zabbix when a fatal error prevents the
+    normal run loop from executing (e.g. bad metrics.yaml syntax).
+
+    Only fires when self_monitoring_metrics is enabled and not in dry_run mode.
+    Never raises — a notification failure must not mask the original error.
+    """
+    if not config.features.self_monitoring_metrics:
+        return
+    if config.runtime.dry_run:
+        log.debug("[dry-run] Skipping fatal failure notification to Zabbix")
+        return
+    try:
+        summary = RunSummary(success=False)
+        sender = SenderManager(config)
+        asyncio.run(sender.send_self_metrics(summary, config.zabbix.host_name))
+        log.info("Sent fatal failure notification to Zabbix (zabbig.client.run.success=0)")
+    except Exception as notify_exc:
+        log.warning("Could not send fatal failure notification to Zabbix: %s", notify_exc)
 
 
 # ---------------------------------------------------------------------------

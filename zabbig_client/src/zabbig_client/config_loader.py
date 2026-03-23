@@ -168,8 +168,11 @@ def load_metrics_config(path: str, strict: bool = True) -> MetricsConfig:
 def _read_yaml(path: str) -> dict:
     if not os.path.isfile(path):
         raise FileNotFoundError(f"Config file not found: {path}")
-    with open(path, "r", encoding="utf-8") as fh:
-        data = yaml.safe_load(fh)
+    try:
+        with open(path, "r", encoding="utf-8") as fh:
+            data = yaml.safe_load(fh)
+    except yaml.YAMLError as exc:
+        raise ConfigError(f"YAML syntax error in '{path}': {exc}") from exc
     if data is None:
         return {}
     if not isinstance(data, dict):
