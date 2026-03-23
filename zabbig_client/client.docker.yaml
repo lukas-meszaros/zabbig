@@ -12,7 +12,8 @@
 
 zabbix:
   # "zabbix-server" resolves via Docker DNS on the shared zabbix-lab-net network.
-  server_host: "zabbix-server"
+  # List format is required even for a single server.
+  server_host: ["zabbix-server"]
   server_port: 10051
   host_name: "prod-server-01"
   connect_timeout_seconds: 10

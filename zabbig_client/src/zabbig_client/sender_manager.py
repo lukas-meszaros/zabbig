@@ -39,11 +39,6 @@ class SenderManager:
         Sender, ItemValue = _import_sender()
         self._Sender = Sender
         self._ItemValue = ItemValue
-        self._sender = Sender(
-            server=config.zabbix.server_host,
-            port=config.zabbix.server_port,
-            chunk_size=1,  # enables per-item failure attribution via response.details
-        )
 
     async def send_batch(self, results: List[MetricResult], summary: RunSummary) -> None:
         """Send all batch-mode results in one call (chunked by batch_send_max_size)."""
@@ -125,34 +120,63 @@ class SenderManager:
             return 0, len(results)
 
     def _do_send(self, results: List[MetricResult], label: str) -> tuple[int, int]:
-        """Blocking Zabbix send — runs in thread pool."""
+        """Blocking Zabbix send — tries each server in order, stops on first success."""
         host_name = self.config.zabbix.host_name
+        hosts = self.config.zabbix.server_hosts
+        port = self.config.zabbix.server_port
         items = [
             self._ItemValue(host_name, r.key, r.value)
             for r in results
         ]
 
-        response = self._sender.send(items)
+        last_exc: Exception | None = None
+        for host in hosts:
+            try:
+                sender = self._Sender(
+                    server=host,
+                    port=port,
+                    chunk_size=1,
+                )
+                response = sender.send(items)
+            except Exception as exc:
+                # Any exception (OSError, ConnectionError, TimeoutError, or
+                # zabbix_utils library errors) means this host was unreachable.
+                # Rotate to the next server.
+                log.warning(
+                    "Send FAILED [%s] server=%s:%d — %s: %s — trying next",
+                    label, host, port, type(exc).__name__, exc,
+                )
+                last_exc = exc
+                continue
 
-        if response.failed == 0:
-            log.info(
-                "Send OK [%s]: processed=%d total=%d (%.3fs)",
-                label, response.processed, response.total, float(response.time),
+            # Reached a server — evaluate protocol response
+            if response.failed == 0:
+                log.info(
+                    "Send OK [%s] server=%s: processed=%d total=%d (%.3fs)",
+                    label, host, response.processed, response.total, float(response.time),
+                )
+                return response.processed, 0
+
+            # Partial or full Zabbix protocol rejection — do NOT rotate
+            # (same data would be rejected by every server; they share the same DB)
+            log.warning(
+                "Send PARTIAL [%s] server=%s: processed=%d failed=%d total=%d",
+                label, host, response.processed, response.failed, response.total,
             )
-            return response.processed, 0
+            if response.details:
+                for node, chunks in response.details.items():
+                    for resp in chunks:
+                        item = results[resp.chunk - 1]
+                        if resp.failed:
+                            log.warning(
+                                "  REJECTED  key=%-40s  value=%s  (node=%s)",
+                                item.key, item.value, node,
+                            )
+            return response.processed, response.failed
 
-        # At least one item failed — identify which ones using response.details
-        log.warning(
-            "Send PARTIAL [%s]: processed=%d failed=%d total=%d",
-            label, response.processed, response.failed, response.total,
+        # All hosts exhausted due to connection errors
+        log.error(
+            "Send FAILED [%s]: all %d server(s) unreachable. Last error: %s",
+            label, len(hosts), last_exc,
         )
-        if response.details:
-            for node, chunks in response.details.items():
-                for resp in chunks:
-                    item = results[resp.chunk - 1]
-                    if resp.failed:
-                        log.warning(
-                            "  REJECTED  key=%-40s  value=%s  (node=%s)",
-                            item.key, item.value, node,
-                        )
-        return response.processed, response.failed
+        return 0, len(results)

@@ -49,8 +49,14 @@ def load_client_config(path: str) -> ClientConfig:
     cfg = ClientConfig()
 
     z = raw.get("zabbix", {})
+    raw_hosts = z.get("server_host", ["127.0.0.1"])
+    if not isinstance(raw_hosts, list):
+        raise ConfigError(
+            "zabbix.server_host must be a list, e.g. server_host: [\"127.0.0.1\"]"
+        )
+    server_hosts = [str(h) for h in raw_hosts]
     cfg.zabbix = ZabbixConfig(
-        server_host=str(z.get("server_host", "127.0.0.1")),
+        server_hosts=server_hosts,
         server_port=int(z.get("server_port", 10051)),
         host_name=str(z.get("host_name", socket.gethostname())),
         host_group=str(z.get("host_group", "zabbig Clients")),
@@ -399,6 +405,11 @@ def _validate_collector_params(metric_id: str, collector: str, params: dict, str
 
 
 def _validate_client_config(cfg: ClientConfig) -> None:
+    if not cfg.zabbix.server_hosts:
+        raise ConfigError("zabbix.server_host must contain at least one entry")
+    for h in cfg.zabbix.server_hosts:
+        if not h:
+            raise ConfigError("zabbix.server_host entries must not be empty strings")
     if cfg.zabbix.server_port < 1 or cfg.zabbix.server_port > 65535:
         raise ConfigError(f"zabbix.server_port out of range: {cfg.zabbix.server_port}")
     if not cfg.zabbix.host_name:

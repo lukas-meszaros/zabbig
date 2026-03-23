@@ -38,7 +38,7 @@ VALID_COLLECTORS = {"cpu", "memory", "disk", "service", "network", "log", "probe
 
 @dataclass
 class ZabbixConfig:
-    server_host: str = "127.0.0.1"
+    server_hosts: list = field(default_factory=lambda: ["127.0.0.1"])
     server_port: int = 10051
     host_name: str = ""
     host_group: str = "zabbig Clients"

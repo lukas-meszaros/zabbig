@@ -44,9 +44,15 @@ class TestLoadYaml:
 class TestServerHostFromConfig:
     def test_reads_server_host(self, tmp_path):
         cfg = tmp_path / "client.yaml"
-        cfg.write_text("zabbix:\n  server_host: 192.168.1.100\n")
+        cfg.write_text("zabbix:\n  server_host: [\"192.168.1.100\"]\n")
         result = server_host_from_config(str(cfg))
         assert result == "192.168.1.100"
+
+    def test_reads_first_host_from_list(self, tmp_path):
+        cfg = tmp_path / "client.yaml"
+        cfg.write_text("zabbix:\n  server_host: [\"proxy-a\", \"proxy-b\"]\n")
+        result = server_host_from_config(str(cfg))
+        assert result == "proxy-a"
 
     def test_missing_file_returns_default(self, tmp_path):
         result = server_host_from_config(str(tmp_path / "missing.yaml"))

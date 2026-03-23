@@ -69,10 +69,13 @@ def load_yaml(path: str) -> dict:
 
 
 def server_host_from_config(config_path: str) -> str:
-    """Read zabbix.server_host from client.yaml (plain YAML, no validation)."""
+    """Read the first entry of zabbix.server_host from client.yaml."""
     try:
         data = load_yaml(config_path)
-        return data.get("zabbix", {}).get("server_host", "127.0.0.1")
+        raw = data.get("zabbix", {}).get("server_host", ["127.0.0.1"])
+        if isinstance(raw, list):
+            return str(raw[0]) if raw else "127.0.0.1"
+        return str(raw)  # tolerate bare string for manual/ad-hoc use
     except Exception:
         return "127.0.0.1"
 

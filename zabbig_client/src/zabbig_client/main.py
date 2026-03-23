@@ -74,7 +74,7 @@ def run(
 
     log.info("=" * 60)
     log.info("zabbig client starting")
-    log.info("  server : %s:%d", client_config.zabbix.server_host, client_config.zabbix.server_port)
+    log.info("  servers: %s (port %d)", ", ".join(client_config.zabbix.server_hosts), client_config.zabbix.server_port)
     log.info("  host   : %s", client_config.zabbix.host_name)
     log.info("  dry_run: %s", client_config.runtime.dry_run)
     log.info("  configs: %s | %s", client_config_path, metrics_config_path)

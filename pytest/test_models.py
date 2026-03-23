@@ -74,7 +74,7 @@ class TestConstants:
 class TestZabbixConfig:
     def test_defaults(self):
         cfg = ZabbixConfig()
-        assert cfg.server_host == "127.0.0.1"
+        assert cfg.server_hosts == ["127.0.0.1"]
         assert cfg.server_port == 10051
         assert cfg.host_name == ""
         assert cfg.host_group == "zabbig Clients"
@@ -82,10 +82,14 @@ class TestZabbixConfig:
         assert cfg.send_timeout_seconds == 30.0
 
     def test_custom_values(self):
-        cfg = ZabbixConfig(server_host="zabbix.example.com", server_port=10052, host_name="myhost")
-        assert cfg.server_host == "zabbix.example.com"
+        cfg = ZabbixConfig(server_hosts=["zabbix.example.com"], server_port=10052, host_name="myhost")
+        assert cfg.server_hosts == ["zabbix.example.com"]
         assert cfg.server_port == 10052
         assert cfg.host_name == "myhost"
+
+    def test_multiple_hosts(self):
+        cfg = ZabbixConfig(server_hosts=["proxy-a", "proxy-b", "proxy-c"])
+        assert cfg.server_hosts == ["proxy-a", "proxy-b", "proxy-c"]
 
 
 class TestRuntimeConfig:

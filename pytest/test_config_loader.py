@@ -27,11 +27,11 @@ class TestLoadClientConfig:
     def test_minimal_valid(self, tmp_path):
         path = write_yaml(tmp_path, "client.yaml", """
             zabbix:
-              server_host: "127.0.0.1"
+              server_host: ["127.0.0.1"]
               host_name: "testhost"
         """)
         cfg = load_client_config(path)
-        assert cfg.zabbix.server_host == "127.0.0.1"
+        assert cfg.zabbix.server_hosts == ["127.0.0.1"]
         assert cfg.zabbix.host_name == "testhost"
 
     def test_file_not_found(self):
@@ -54,7 +54,7 @@ class TestLoadClientConfig:
     def test_all_sections(self, tmp_path):
         path = write_yaml(tmp_path, "client.yaml", """
             zabbix:
-              server_host: "10.0.0.1"
+              server_host: ["10.0.0.1"]
               server_port: 10052
               host_name: "srv01"
               host_group: "My Group"
@@ -90,7 +90,7 @@ class TestLoadClientConfig:
               skip_disabled_metrics: false
         """)
         cfg = load_client_config(path)
-        assert cfg.zabbix.server_host == "10.0.0.1"
+        assert cfg.zabbix.server_hosts == ["10.0.0.1"]
         assert cfg.zabbix.server_port == 10052
         assert cfg.zabbix.host_name == "srv01"
         assert cfg.zabbix.host_group == "My Group"
@@ -162,8 +162,26 @@ class TestLoadClientConfig:
         # Empty YAML won't have host_name so load_client_config will populate from socket
         import socket
         cfg = load_client_config(str(path))
-        assert cfg.zabbix.server_host == "127.0.0.1"
+        assert cfg.zabbix.server_hosts == ["127.0.0.1"]
         assert cfg.zabbix.host_name == socket.gethostname()
+
+    def test_server_host_bare_string_raises(self, tmp_path):
+        path = write_yaml(tmp_path, "client.yaml", """
+            zabbix:
+              server_host: "10.0.0.1"
+              host_name: "h"
+        """)
+        with pytest.raises(ConfigError, match="must be a list"):
+            load_client_config(path)
+
+    def test_server_host_multiple_entries(self, tmp_path):
+        path = write_yaml(tmp_path, "client.yaml", """
+            zabbix:
+              server_host: ["proxy-a", "proxy-b", "proxy-c"]
+              host_name: "h"
+        """)
+        cfg = load_client_config(path)
+        assert cfg.zabbix.server_hosts == ["proxy-a", "proxy-b", "proxy-c"]
 
 
 # ---------------------------------------------------------------------------

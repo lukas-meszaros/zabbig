@@ -15,14 +15,25 @@ Two YAML files control the client's behaviour:
 
 #### `server_host`
 
-IP address or DNS hostname of the Zabbix server, used for the trapper (sender) connection on port 10051. When sending through a Zabbix proxy, point this at the proxy.
+An ordered list of one or more Zabbix server or proxy addresses used for the trapper (sender) connection on port 10051. The client tries each address in order — if a connection error occurs on the first, it rotates to the next. Zabbix protocol rejections (unknown item key, wrong value type) are **not** rotated; because all servers share the same database, the same data would be rejected on every server.
 
 ```yaml
+# Single server — dev / simple setup
 zabbix:
-  server_host: "10.0.1.50"         # direct IP — most reliable in Docker/cron
-  server_host: "zabbix-server"      # Docker DNS name (inside docker-compose network)
-  server_host: "zabbix.corp.lan"    # DNS name — requires DNS resolution at run time
+  server_host: ["127.0.0.1"]
+
+# Multiple servers / proxies — prod failover
+zabbix:
+  server_host: ["proxy-bar", "proxy-tor"]
+
+# Block form (equivalent)
+zabbix:
+  server_host:
+    - "10.0.1.50"
+    - "10.0.1.51"
 ```
+
+A list is always required, even for a single entry. A bare string will cause a `ConfigError` at startup.
 
 #### `server_port`
 

@@ -8,8 +8,16 @@
 # Zabbix server connection
 # ---------------------------------------------------------------------------
 zabbix:
-  # IP or hostname of your Zabbix server (trapper port)
-  server_host: "127.0.0.1"
+  # One or more Zabbix server/proxy addresses (trapper port).
+  # The client tries them in order — if the first fails with a connection
+  # error, it rotates to the next. Zabbix protocol rejections (bad item,
+  # wrong value type) are NOT rotated; they would fail on every server.
+  #
+  # Single server (dev):
+  #   server_host: ["127.0.0.1"]
+  # Multiple servers / proxies (prod):
+  #   server_host: ["proxy-1", "proxy-2"]
+  server_host: ["127.0.0.1"]
 
   # Zabbix trapper port (default: 10051)
   server_port: 10051

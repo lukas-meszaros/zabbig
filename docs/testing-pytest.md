@@ -244,6 +244,7 @@ Tests all constants and dataclasses from `zabbig_client/models.py`.
 **Notable coverage:**
 - `VALID_COLLECTORS`, `VALID_DELIVERY`, `VALID_ERROR_POLICIES`, `VALID_VALUE_TYPES`
 - `ZabbixConfig`, `RuntimeConfig`, `BatchingConfig`, `LoggingConfig`, `FeaturesConfig`, `ClientConfig`
+- `ZabbixConfig.server_hosts` defaults to `["127.0.0.1"]` (list, not string)
 - `MetricDef` construction and validation
 - `MetricResult.is_sendable()`, `MetricResult.make_timeout()`, `MetricResult.make_error()`, `MetricResult.make_fallback()`
 - `RunSummary` field counting
@@ -257,6 +258,8 @@ Tests `load_client_config` and `load_metrics_config` from `zabbig_client/config_
 **Key imports:** `zabbig_client.config_loader`  
 **Notable coverage:**
 - Empty/minimal YAML → all defaults applied
+- `server_host` must be a list — bare string raises `ConfigError`
+- Single-element and multi-element `server_host` lists accepted
 - Each config section (`zabbix`, `runtime`, `batching`, `logging`, `features`)
 - Invalid values raise `ValueError` (bad port, bad log level, unknown collector with `unknown_collector_strict: true`)
 - Per-metric param validation: `disk` requires `mount`, `service` requires `service_name`, `network` requires `mode`, `log` requires `path` and `match`, `probe` requires `mode` + `url`/`host`/`port`
