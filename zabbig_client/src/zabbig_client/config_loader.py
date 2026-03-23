@@ -48,6 +48,15 @@ def load_client_config(path: str) -> ClientConfig:
     raw = _read_yaml(path)
     cfg = ClientConfig()
 
+    # Base directory for resolving relative paths in the config file.
+    # Using the config file's own directory means the client works correctly
+    # regardless of the working directory from which run.py is invoked.
+    config_dir = os.path.dirname(os.path.abspath(path))
+
+    def _resolve(p: str) -> str:
+        """Return p as-is if absolute, otherwise resolve relative to config_dir."""
+        return p if os.path.isabs(p) else os.path.join(config_dir, p)
+
     z = raw.get("zabbix", {})
     raw_hosts = z.get("server_host", ["127.0.0.1"])
     if not isinstance(raw_hosts, list):
@@ -68,7 +77,7 @@ def load_client_config(path: str) -> ClientConfig:
     cfg.runtime = RuntimeConfig(
         overall_timeout_seconds=float(r.get("overall_timeout_seconds", 240.0)),
         max_concurrency=int(r.get("max_concurrency", 8)),
-        lock_file=str(r.get("lock_file", "state/zabbig_client.lock")),
+        lock_file=_resolve(str(r.get("lock_file", "state/zabbig_client.lock"))),
         dry_run=bool(r.get("dry_run", False)),
         fail_fast=bool(r.get("fail_fast", False)),
         proc_root=str(r.get("proc_root", "/proc")),
@@ -86,14 +95,14 @@ def load_client_config(path: str) -> ClientConfig:
     cfg.logging = LoggingConfig(
         level=str(lg.get("level", "INFO")).upper(),
         format=str(lg.get("format", "text")),
-        file=lg.get("file") or None,
+        file=_resolve(str(lg["file"])) if lg.get("file") else None,
         console=bool(lg.get("console", True)),
     )
 
     st = raw.get("state", {})
     cfg.state = StateConfig(
         enabled=bool(st.get("enabled", False)),
-        directory=str(st.get("directory", "state")),
+        directory=_resolve(str(st.get("directory", "state"))),
     )
 
     ft = raw.get("features", {})
