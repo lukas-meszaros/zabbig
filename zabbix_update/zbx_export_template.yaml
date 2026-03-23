@@ -1,0 +1,1558 @@
+zabbix_export:
+  version: '7.0'
+  template_groups:
+    - uuid: a140aad8df6f42fbbfc7efb0bd4dbd09
+      name: 'zabbig Templates'
+  templates:
+    - uuid: 78a1712e7ab24a1e9a44dbf04858facc
+      template: 'zabbig Linux Host'
+      name: 'zabbig Linux Host'
+      description: 'Host metrics collected by the zabbig_client monitoring agent.'
+      groups:
+        - name: 'zabbig Templates'
+      items:
+        - uuid: 0a8b5b2c334c48609164454c63b18c5b
+          name: 'App log: max API response time (ms)'
+          type: TRAP
+          key: app.log.api.response_time_max_ms
+          delay: '0'
+          history: 7d
+          value_type: FLOAT
+          description: 'Maximum response_time value seen in the access log since last scan.'
+          tags:
+            - tag: component
+              value: log
+            - tag: source
+              value: zabbig
+          triggers:
+            - uuid: 709fff05a2434175be2a99ff2194473a
+              expression: 'last(/zabbig Linux Host/app.log.api.response_time_max_ms)>2000'
+              name: 'Slow API response time on {HOST.NAME}'
+              priority: WARNING
+              description: 'Maximum API response time exceeded 2000 ms in the last collection window.'
+        - uuid: 9f1a0380c6804cdb94d57f9e43d0d2c1
+          name: 'App log: error detected'
+          type: TRAP
+          key: app.log.error
+          delay: '0'
+          history: 7d
+          trends: '0'
+          description: '1 = ERROR line appeared in the application log since last scan, 0 = clean.'
+          tags:
+            - tag: component
+              value: log
+            - tag: source
+              value: zabbig
+          triggers:
+            - uuid: 842ef0c0c1f547d5b2f314939df8c59c
+              expression: 'last(/zabbig Linux Host/app.log.error)=1'
+              name: 'Application error detected on {HOST.NAME}'
+              priority: AVERAGE
+              description: 'An ERROR line was detected in the application log.'
+        - uuid: 7fbc883cde684a22beaca515ad114976
+          name: 'App log: payment API calls total'
+          type: TRAP
+          key: app.log.payment.calls.total
+          delay: '0'
+          history: 7d
+          description: 'Cumulative count of POST /api/v1/payment lines in the access log.'
+          tags:
+            - tag: component
+              value: log
+            - tag: source
+              value: zabbig
+        - uuid: 0b25790dda4b4584928bd23c9903e405
+          name: 'App log: severity level'
+          type: TRAP
+          key: app.log.severity
+          delay: '0'
+          history: 7d
+          trends: '0'
+          description: 'Highest severity in the application log since last scan. 3=FATAL, 2=ERROR, 1=WARN, 0=clean.'
+          tags:
+            - tag: component
+              value: log
+            - tag: source
+              value: zabbig
+          triggers:
+            - uuid: b12cde78a2924c77ba26861beffdfc00
+              expression: 'last(/zabbig Linux Host/app.log.severity)=2'
+              name: 'Application ERROR in log on {HOST.NAME}'
+              priority: AVERAGE
+              description: 'An ERROR was detected in the application log.'
+              dependencies:
+                - name: 'Application FATAL error on {HOST.NAME}'
+                  expression: 'last(/zabbig Linux Host/app.log.severity)>=3'
+            - uuid: fc649a4a089a4d18bb88a51c03c5ba44
+              expression: 'last(/zabbig Linux Host/app.log.severity)>=3'
+              name: 'Application FATAL error on {HOST.NAME}'
+              priority: HIGH
+              description: 'A FATAL or OutOfMemory event was detected in the application log.'
+        - uuid: 19c36b8c04ba4b6f9d99f6b403a94240
+          name: 'Load average 1 min'
+          type: TRAP
+          key: host.cpu.load1
+          delay: '0'
+          history: 7d
+          value_type: FLOAT
+          description: 'System load average over the last 1 minute.'
+          tags:
+            - tag: component
+              value: cpu
+            - tag: source
+              value: zabbig
+          triggers:
+            - uuid: 142a4d2dba8c4164ac4db8062cd1d896
+              expression: 'last(/zabbig Linux Host/host.cpu.load1)>10'
+              name: 'High 1-min load average on {HOST.NAME}'
+              priority: WARNING
+              description: '1-minute load average exceeds 10. Adjust threshold to match server core count.'
+        - uuid: 30e8fdf321514eb88c6d9fcf0fc4e474
+          name: 'Load average 5 min'
+          type: TRAP
+          key: host.cpu.load5
+          delay: '0'
+          history: 7d
+          value_type: FLOAT
+          description: 'System load average over the last 5 minutes.'
+          tags:
+            - tag: component
+              value: cpu
+            - tag: source
+              value: zabbig
+        - uuid: 0be6283396884d4ba424fd49f04e2ada
+          name: 'Load average 15 min'
+          type: TRAP
+          key: host.cpu.load15
+          delay: '0'
+          history: 7d
+          value_type: FLOAT
+          description: 'System load average over the last 15 minutes.'
+          tags:
+            - tag: component
+              value: cpu
+            - tag: source
+              value: zabbig
+        - uuid: c5b788024a3e4e5598df4b424ca8c763
+          name: 'CPU utilisation %'
+          type: TRAP
+          key: host.cpu.util
+          delay: '0'
+          history: 7d
+          value_type: FLOAT
+          description: 'Total CPU utilisation across all cores (two /proc/stat reads, 200 ms apart).'
+          tags:
+            - tag: component
+              value: cpu
+            - tag: source
+              value: zabbig
+          triggers:
+            - uuid: 41448765608849d5b2ce546c6f9d2b62
+              expression: 'min(/zabbig Linux Host/host.cpu.util,5m)>95'
+              name: 'Critical CPU utilisation on {HOST.NAME}'
+              priority: HIGH
+              description: 'CPU utilisation has been above 95% for the last 5 minutes.'
+              dependencies:
+                - name: 'High CPU utilisation on {HOST.NAME}'
+                  expression: 'min(/zabbig Linux Host/host.cpu.util,5m)>85'
+            - uuid: 07e2a0c573704de0a32522319d8cb945
+              expression: 'min(/zabbig Linux Host/host.cpu.util,5m)>85'
+              name: 'High CPU utilisation on {HOST.NAME}'
+              priority: WARNING
+              description: 'CPU utilisation has been above 85% for the last 5 minutes.'
+        - uuid: 5cbe1b9ef8e3473ea4802b645b3fea3e
+          name: 'Disk /data used %'
+          type: TRAP
+          key: host.disk.data.used_percent
+          delay: '0'
+          history: 7d
+          value_type: FLOAT
+          description: 'Percentage of /data filesystem blocks in use.'
+          tags:
+            - tag: component
+              value: disk
+            - tag: source
+              value: zabbig
+        - uuid: 6c61803cc56a481a9c130e40b87f1380
+          name: 'Disk / free bytes'
+          type: TRAP
+          key: host.disk.root.free_bytes
+          delay: '0'
+          history: 7d
+          description: 'Bytes available to non-root users on the root filesystem.'
+          tags:
+            - tag: component
+              value: disk
+            - tag: source
+              value: zabbig
+        - uuid: 99408ebe92624320802f3c3e89400665
+          name: 'Disk / inodes free'
+          type: TRAP
+          key: host.disk.root.inodes_free
+          delay: '0'
+          history: 7d
+          description: 'Number of free inode slots on the root filesystem.'
+          tags:
+            - tag: component
+              value: disk
+            - tag: source
+              value: zabbig
+        - uuid: de2af6c0d7ef4afc9a6ce02454a40c8b
+          name: 'Disk / inodes total'
+          type: TRAP
+          key: host.disk.root.inodes_total
+          delay: '0'
+          history: 7d
+          description: 'Total inode slots on the root filesystem.'
+          tags:
+            - tag: component
+              value: disk
+            - tag: source
+              value: zabbig
+        - uuid: 0aa76a5a6fef4a16a012e5d13761a304
+          name: 'Disk / inodes used'
+          type: TRAP
+          key: host.disk.root.inodes_used
+          delay: '0'
+          history: 7d
+          description: 'Number of inode slots in use on the root filesystem.'
+          tags:
+            - tag: component
+              value: disk
+            - tag: source
+              value: zabbig
+        - uuid: d12407d589b04f5ea1d9ed9d5f08aa40
+          name: 'Disk / inodes used %'
+          type: TRAP
+          key: host.disk.root.inodes_used_percent
+          delay: '0'
+          history: 7d
+          value_type: FLOAT
+          description: 'Percentage of inode slots in use on the root filesystem.'
+          tags:
+            - tag: component
+              value: disk
+            - tag: source
+              value: zabbig
+          triggers:
+            - uuid: 0b201acdcfb34569b86759353586744b
+              expression: 'last(/zabbig Linux Host/host.disk.root.inodes_used_percent)>95'
+              name: 'Inode exhaustion critical on {HOST.NAME}'
+              priority: HIGH
+              description: 'Root filesystem inode usage above 95%.'
+              dependencies:
+                - name: 'Inode exhaustion warning on {HOST.NAME}'
+                  expression: 'last(/zabbig Linux Host/host.disk.root.inodes_used_percent)>80'
+            - uuid: 3963d45da1cb4c22803e90745a7632bf
+              expression: 'last(/zabbig Linux Host/host.disk.root.inodes_used_percent)>80'
+              name: 'Inode exhaustion warning on {HOST.NAME}'
+              priority: WARNING
+              description: 'Root filesystem inode usage above 80%. Inode exhaustion prevents new file creation even when disk space is available.'
+        - uuid: 351d03f25b39470ea551e0aacae6714c
+          name: 'Disk / used bytes'
+          type: TRAP
+          key: host.disk.root.used_bytes
+          delay: '0'
+          history: 7d
+          description: 'Bytes currently used on the root filesystem.'
+          tags:
+            - tag: component
+              value: disk
+            - tag: source
+              value: zabbig
+        - uuid: dddf21374cb147e7b880953d52a97a3b
+          name: 'Disk / used %'
+          type: TRAP
+          key: host.disk.root.used_percent
+          delay: '0'
+          history: 7d
+          value_type: FLOAT
+          description: 'Percentage of root filesystem blocks in use.'
+          tags:
+            - tag: component
+              value: disk
+            - tag: source
+              value: zabbig
+          triggers:
+            - uuid: 5d1fb34585724535b698ff22ef24baf9
+              expression: 'last(/zabbig Linux Host/host.disk.root.used_percent)>80'
+              name: 'Disk / above 80% on {HOST.NAME}'
+              priority: WARNING
+              description: 'Root filesystem is more than 80% full.'
+            - uuid: a3d18f1c082e4a86a53a83e5446ab86e
+              expression: 'last(/zabbig Linux Host/host.disk.root.used_percent)>90'
+              name: 'Disk / above 90% on {HOST.NAME}'
+              priority: HIGH
+              description: 'Root filesystem is more than 90% full.'
+              dependencies:
+                - name: 'Disk / above 80% on {HOST.NAME}'
+                  expression: 'last(/zabbig Linux Host/host.disk.root.used_percent)>80'
+        - uuid: 7108a5245a3f4c45811d6c87853957ad
+          name: 'Memory available bytes'
+          type: TRAP
+          key: host.memory.available_bytes
+          delay: '0'
+          history: 7d
+          description: 'Bytes of RAM available for new allocations without swapping (MemAvailable).'
+          tags:
+            - tag: component
+              value: memory
+            - tag: source
+              value: zabbig
+        - uuid: c102f3d8fe1143b8a49c707f3b4549e7
+          name: 'Swap used %'
+          type: TRAP
+          key: host.memory.swap_used_percent
+          delay: '0'
+          history: 7d
+          value_type: FLOAT
+          description: 'Percentage of swap in use. Reports 0 when no swap is configured.'
+          tags:
+            - tag: component
+              value: memory
+            - tag: source
+              value: zabbig
+          triggers:
+            - uuid: 24a11e9279134ef6b3af10247979e95a
+              expression: 'min(/zabbig Linux Host/host.memory.swap_used_percent,5m)>20'
+              name: 'Swap in use on {HOST.NAME}'
+              priority: WARNING
+              description: 'Swap usage has been above 20% for the last 5 minutes.'
+        - uuid: 6a7cd21d02fd4c6c83c56dfc963fe466
+          name: 'Memory used %'
+          type: TRAP
+          key: host.memory.used_percent
+          delay: '0'
+          history: 7d
+          value_type: FLOAT
+          description: 'Percentage of RAM in use. Uses MemAvailable (not MemFree) for accuracy.'
+          tags:
+            - tag: component
+              value: memory
+            - tag: source
+              value: zabbig
+          triggers:
+            - uuid: a6bbe366b0cd499abfbb729c134bc296
+              expression: 'min(/zabbig Linux Host/host.memory.used_percent,5m)>95'
+              name: 'Critical memory usage on {HOST.NAME}'
+              priority: HIGH
+              description: 'Memory usage has been above 95% for the last 5 minutes.'
+              dependencies:
+                - name: 'High memory usage on {HOST.NAME}'
+                  expression: 'min(/zabbig Linux Host/host.memory.used_percent,5m)>85'
+            - uuid: 66cbb5cd972d44539c79f2b113e6c83b
+              expression: 'min(/zabbig Linux Host/host.memory.used_percent,5m)>85'
+              name: 'High memory usage on {HOST.NAME}'
+              priority: WARNING
+              description: 'Memory usage has been above 85% for the last 5 minutes.'
+        - uuid: 62ac5448e44e411d90a9f14155568514
+          name: 'eth0 RX bytes/sec'
+          type: TRAP
+          key: host.net.eth0.rx_bytes_per_sec
+          delay: '0'
+          history: 7d
+          value_type: FLOAT
+          description: 'Inbound throughput for eth0 in bytes/sec.'
+          tags:
+            - tag: component
+              value: network
+            - tag: source
+              value: zabbig
+        - uuid: 960fd5a31d1f4d14b603792ff576c91b
+          name: 'eth0 TX bytes/sec'
+          type: TRAP
+          key: host.net.eth0.tx_bytes_per_sec
+          delay: '0'
+          history: 7d
+          value_type: FLOAT
+          description: 'Outbound throughput for eth0 in bytes/sec.'
+          tags:
+            - tag: component
+              value: network
+            - tag: source
+              value: zabbig
+        - uuid: 2bab290e5dae40388c6b1b78c31134c8
+          name: 'Network RX bytes/sec'
+          type: TRAP
+          key: host.net.rx_bytes_per_sec
+          delay: '0'
+          history: 7d
+          value_type: FLOAT
+          description: 'Inbound throughput in bytes/sec across all non-loopback interfaces.'
+          tags:
+            - tag: component
+              value: network
+            - tag: source
+              value: zabbig
+        - uuid: bb979a41f1184adabbcf48c2d12732bc
+          name: 'Network RX dropped'
+          type: TRAP
+          key: host.net.rx_dropped
+          delay: '0'
+          history: 7d
+          description: 'Cumulative receive packet drops since boot (kernel buffer overruns).'
+          tags:
+            - tag: component
+              value: network
+            - tag: source
+              value: zabbig
+          triggers:
+            - uuid: 282e28fcb91b405f88097d9a63b4896b
+              expression: 'change(/zabbig Linux Host/host.net.rx_dropped)>100'
+              name: 'Network RX drops increasing on {HOST.NAME}'
+              priority: WARNING
+              description: 'Receive drop counter increased by more than 100. May indicate kernel buffer overruns.'
+        - uuid: 84ebdf44781b4aeba4bc2dcae01b1547
+          name: 'Network RX errors'
+          type: TRAP
+          key: host.net.rx_errors
+          delay: '0'
+          history: 7d
+          description: 'Cumulative receive errors since boot across all non-loopback interfaces.'
+          tags:
+            - tag: component
+              value: network
+            - tag: source
+              value: zabbig
+          triggers:
+            - uuid: 86363d40d2f8469891bb50112d039ec1
+              expression: 'change(/zabbig Linux Host/host.net.rx_errors)>100'
+              name: 'Network RX errors increasing on {HOST.NAME}'
+              priority: WARNING
+              description: 'Receive error counter increased by more than 100 in the last collection cycle. May indicate NIC or cable issues.'
+        - uuid: 9ef0c9f513fe4ac3ab53628573634397
+          name: 'TCP sockets in use'
+          type: TRAP
+          key: host.net.tcp_inuse
+          delay: '0'
+          history: 7d
+          description: 'Number of currently open TCP sockets.'
+          tags:
+            - tag: component
+              value: network
+            - tag: source
+              value: zabbig
+        - uuid: badcc57685e74d9b86aa28bf67bef289
+          name: 'TCP orphaned sockets'
+          type: TRAP
+          key: host.net.tcp_orphans
+          delay: '0'
+          history: 7d
+          description: 'Orphaned TCP sockets not attached to a file descriptor. Growing count indicates a socket leak.'
+          tags:
+            - tag: component
+              value: network
+            - tag: source
+              value: zabbig
+        - uuid: 1f6a702b0deb4f05a0aeb377eba3efeb
+          name: 'TCP sockets TIME_WAIT'
+          type: TRAP
+          key: host.net.tcp_timewait
+          delay: '0'
+          history: 7d
+          description: 'TCP sockets in TIME_WAIT state. Persistently high values indicate connection churn.'
+          tags:
+            - tag: component
+              value: network
+            - tag: source
+              value: zabbig
+          triggers:
+            - uuid: fa24be7f7acd4e98a737ee349ff659f0
+              expression: 'min(/zabbig Linux Host/host.net.tcp_timewait,10m)>5000'
+              name: 'High TCP TIME_WAIT on {HOST.NAME}'
+              priority: WARNING
+              description: 'TCP TIME_WAIT socket count has been above 5000 for 10 minutes. May indicate connection churn or port exhaustion.'
+        - uuid: 7b92b0272c164824a59bd4d1c73323d3
+          name: 'Network TX bytes/sec'
+          type: TRAP
+          key: host.net.tx_bytes_per_sec
+          delay: '0'
+          history: 7d
+          value_type: FLOAT
+          description: 'Outbound throughput in bytes/sec across all non-loopback interfaces.'
+          tags:
+            - tag: component
+              value: network
+            - tag: source
+              value: zabbig
+        - uuid: e99d7f528c7143ac9efb8a4e45c8e94c
+          name: 'Network TX dropped'
+          type: TRAP
+          key: host.net.tx_dropped
+          delay: '0'
+          history: 7d
+          description: 'Cumulative transmit packet drops since boot.'
+          tags:
+            - tag: component
+              value: network
+            - tag: source
+              value: zabbig
+        - uuid: ba68ccfc1f9b4501b36cdd03b7593cef
+          name: 'Network TX errors'
+          type: TRAP
+          key: host.net.tx_errors
+          delay: '0'
+          history: 7d
+          description: 'Cumulative transmit errors since boot.'
+          tags:
+            - tag: component
+              value: network
+            - tag: source
+              value: zabbig
+        - uuid: c88e1ae170904077ac457fe52751d6ac
+          name: 'UDP sockets in use'
+          type: TRAP
+          key: host.net.udp_inuse
+          delay: '0'
+          history: 7d
+          description: 'Number of currently open UDP sockets.'
+          tags:
+            - tag: component
+              value: network
+            - tag: source
+              value: zabbig
+        - uuid: 9d9b74fe27894adb8399f1a3eee6046f
+          name: 'Service: cron (process check)'
+          type: TRAP
+          key: host.service.cron.process
+          delay: '0'
+          history: 7d
+          trends: '0'
+          description: '1 = cron process found in /proc, 0 = not found.'
+          tags:
+            - tag: component
+              value: service
+            - tag: source
+              value: zabbig
+          triggers:
+            - uuid: afefdde55fbe47d0a34914d3f26125b5
+              expression: 'last(/zabbig Linux Host/host.service.cron.process)=0'
+              name: 'cron is not running on {HOST.NAME}'
+              priority: AVERAGE
+              description: 'No cron process found. Scheduled jobs will not run.'
+        - uuid: 1877dffdb75d4f69a74f2cd6ecbea9c3
+          name: 'Service: nginx'
+          type: TRAP
+          key: host.service.nginx
+          delay: '0'
+          history: 7d
+          trends: '0'
+          description: '1 = nginx active, 0 = not active.'
+          tags:
+            - tag: component
+              value: service
+            - tag: source
+              value: zabbig
+          triggers:
+            - uuid: 3ec67a87b17143128e9b0d0909c176cf
+              expression: 'last(/zabbig Linux Host/host.service.nginx)=0'
+              name: 'nginx is down on {HOST.NAME}'
+              priority: HIGH
+              description: 'nginx is not active.'
+        - uuid: 06c68673c8934eb396bc1af9412384ab
+          name: 'Service: sshd'
+          type: TRAP
+          key: host.service.sshd
+          delay: '0'
+          history: 7d
+          trends: '0'
+          description: '1 = sshd active, 0 = not active.'
+          tags:
+            - tag: component
+              value: service
+            - tag: source
+              value: zabbig
+          triggers:
+            - uuid: 19cba6dcc58f4bd2b1888289e7975415
+              expression: 'last(/zabbig Linux Host/host.service.sshd)=0'
+              name: 'sshd is down on {HOST.NAME}'
+              priority: DISASTER
+              description: 'sshd is not active. SSH access to the host may be unavailable.'
+        - uuid: 5e975d594a5c49b395c682f3f7df47c5
+          name: 'System uptime'
+          type: TRAP
+          key: host.system.uptime
+          delay: '0'
+          history: 7d
+          value_type: FLOAT
+          description: 'Seconds since last boot. A sudden drop indicates an unexpected reboot.'
+          tags:
+            - tag: component
+              value: system
+            - tag: source
+              value: zabbig
+        - uuid: 96a008ce37814bb49bdcb9896ed1dabd
+          name: 'Probe: GitHub API body check'
+          type: TRAP
+          key: probe.github.api.body
+          delay: '0'
+          history: 7d
+          trends: '0'
+          description: '1 = response body contains expected JSON key, 0 = otherwise. Checks https://api.github.com.'
+          tags:
+            - tag: component
+              value: probe
+            - tag: source
+              value: zabbig
+          triggers:
+            - uuid: cba1841caf214b4dacf54360d790b328
+              expression: 'last(/zabbig Linux Host/probe.github.api.body)=0'
+              name: 'GitHub API body check failed on {HOST.NAME}'
+              priority: AVERAGE
+              description: 'GitHub REST API response body does not contain expected JSON key. API may be returning an error page.'
+        - uuid: 4aa44b8924ee4bd78f926e113cebd490
+          name: 'Probe: GitHub API body SSL cert'
+          type: TRAP
+          key: probe.github.api.body.ssl_check
+          delay: '0'
+          history: 7d
+          trends: '0'
+          description: 'SSL certificate validity for api.github.com (body probe). 1=valid, 0=invalid, 2=unknown.'
+          tags:
+            - tag: component
+              value: probe
+            - tag: source
+              value: zabbig
+          triggers:
+            - uuid: 83459a065d954847bc3e1f9938e61c51
+              expression: 'last(/zabbig Linux Host/probe.github.api.body.ssl_check)=0'
+              name: 'GitHub API body probe SSL cert invalid on {HOST.NAME}'
+              priority: AVERAGE
+              description: 'TLS certificate for api.github.com is invalid (detected by body probe).'
+              dependencies:
+                - name: 'GitHub API SSL certificate invalid on {HOST.NAME}'
+                  expression: 'last(/zabbig Linux Host/probe.github.api.up.ssl_check)=0'
+        - uuid: db7bfceeb7054234b7e07aceb2369b06
+          name: 'Probe: GitHub API up (http_status)'
+          type: TRAP
+          key: probe.github.api.up
+          delay: '0'
+          history: 7d
+          trends: '0'
+          description: '1=2xx, 2=4xx, 3=5xx, 0=unreachable. Checks https://api.github.com status code.'
+          tags:
+            - tag: component
+              value: probe
+            - tag: source
+              value: zabbig
+          triggers:
+            - uuid: 1f31928e51034c8d8a912399e8342ee2
+              expression: 'last(/zabbig Linux Host/probe.github.api.up)<>1'
+              name: 'GitHub API not returning 2xx from {HOST.NAME}'
+              priority: WARNING
+              description: 'GitHub REST API at api.github.com is not returning a 2xx status code.'
+        - uuid: bb70d05f6d07439e8bc08d3b8a1ce4ff
+          name: 'Probe: GitHub API response time (ms)'
+          type: TRAP
+          key: probe.github.api.up.response_time_ms
+          delay: '0'
+          history: 7d
+          description: 'HTTP round-trip time to api.github.com in milliseconds. 0 when probe fails.'
+          tags:
+            - tag: component
+              value: probe
+            - tag: source
+              value: zabbig
+          triggers:
+            - uuid: 229f86e20af2476386dbdf12c26b88ff
+              expression: 'last(/zabbig Linux Host/probe.github.api.up.response_time_ms)>3000'
+              name: 'GitHub API slow response from {HOST.NAME}'
+              priority: WARNING
+              description: 'HTTP response time to api.github.com exceeded 3000 ms.'
+              dependencies:
+                - name: 'GitHub API not returning 2xx from {HOST.NAME}'
+                  expression: 'last(/zabbig Linux Host/probe.github.api.up)<>1'
+        - uuid: a572ec16b8af4cb4ab19ce2aea45f488
+          name: 'Probe: GitHub API SSL cert'
+          type: TRAP
+          key: probe.github.api.up.ssl_check
+          delay: '0'
+          history: 7d
+          trends: '0'
+          description: 'SSL certificate validity for api.github.com. 1=valid, 0=invalid, 2=unknown.'
+          tags:
+            - tag: component
+              value: probe
+            - tag: source
+              value: zabbig
+          triggers:
+            - uuid: 262ad5da3e324c639d332b2cf387ed3f
+              expression: 'last(/zabbig Linux Host/probe.github.api.up.ssl_check)=0'
+              name: 'GitHub API SSL certificate invalid on {HOST.NAME}'
+              priority: AVERAGE
+              description: 'TLS certificate for api.github.com is invalid (expired, hostname mismatch, or untrusted CA).'
+            - uuid: a088a083e6704f1ebfeba211e0d517a4
+              expression: 'last(/zabbig Linux Host/probe.github.api.up.ssl_check)=2'
+              name: 'GitHub API SSL certificate unknown on {HOST.NAME}'
+              priority: WARNING
+              description: 'Could not verify TLS certificate for api.github.com. Host may be unreachable or using an unexpected TLS version.'
+              dependencies:
+                - name: 'GitHub API SSL certificate invalid on {HOST.NAME}'
+                  expression: 'last(/zabbig Linux Host/probe.github.api.up.ssl_check)=0'
+        - uuid: 93af85d771ff4fda9b39abe39b64d596
+          name: 'Probe: GitHub HTTPS port (github.com:443)'
+          type: TRAP
+          key: probe.github.https.port
+          delay: '0'
+          history: 7d
+          trends: '0'
+          description: '1 = TCP port 443 on github.com is reachable, 0 = not reachable.'
+          tags:
+            - tag: component
+              value: probe
+            - tag: source
+              value: zabbig
+          triggers:
+            - uuid: ca00f59e4bcc43cdbbd961a26396b637
+              expression: 'last(/zabbig Linux Host/probe.github.https.port)=0'
+              name: 'GitHub HTTPS port unreachable from {HOST.NAME}'
+              priority: WARNING
+              description: 'TCP port 443 on github.com is not reachable. Outbound HTTPS traffic may be blocked.'
+        - uuid: ea61fd525c5a46a59046c18636acdeb5
+          name: 'Probe: Google DNS (8.8.8.8:53)'
+          type: TRAP
+          key: probe.google.dns
+          delay: '0'
+          history: 7d
+          trends: '0'
+          description: '1 = TCP port 53 on 8.8.8.8 is reachable, 0 = not reachable. Basic outbound connectivity indicator.'
+          tags:
+            - tag: component
+              value: probe
+            - tag: source
+              value: zabbig
+          triggers:
+            - uuid: 59bd3b4ba4644a309acefb1fc09995b2
+              expression: 'last(/zabbig Linux Host/probe.google.dns)=0'
+              name: 'Google DNS unreachable from {HOST.NAME}'
+              priority: WARNING
+              description: 'TCP port 53 on 8.8.8.8 is not reachable. May indicate a network outage or DNS filtering.'
+        - uuid: 97dc5b4bc65f428481825b3c64fcdd61
+          name: 'Probe: Google DNS response time (ms)'
+          type: TRAP
+          key: probe.google.dns.response_time_ms
+          delay: '0'
+          history: 7d
+          description: 'TCP round-trip time to 8.8.8.8:53 in milliseconds. 0 when probe fails.'
+          tags:
+            - tag: component
+              value: probe
+            - tag: source
+              value: zabbig
+        - uuid: 1eceddc5fa044738a74b0cbaaf14bfdb
+          name: 'Probe: httpbin JSON body check'
+          type: TRAP
+          key: probe.httpbin.json.body
+          delay: '0'
+          history: 7d
+          trends: '0'
+          description: '1 = https://httpbin.org/json contains expected JSON structure. Disabled by default.'
+          tags:
+            - tag: component
+              value: probe
+            - tag: source
+              value: zabbig
+        - uuid: fff4b82c68c746ed92e6aa20b6d38b12
+          name: 'Probe: httpbin JSON response time (ms)'
+          type: TRAP
+          key: probe.httpbin.json.body.response_time_ms
+          delay: '0'
+          history: 7d
+          description: 'HTTP round-trip time to httpbin.org/json in milliseconds. Disabled by default.'
+          tags:
+            - tag: component
+              value: probe
+            - tag: source
+              value: zabbig
+        - uuid: b829a705e9cf4624b15739813c7dd60e
+          name: 'Probe: httpbin 200 check'
+          type: TRAP
+          key: probe.httpbin.status.200
+          delay: '0'
+          history: 7d
+          trends: '0'
+          description: '1 = https://httpbin.org/status/200 returns 2xx, 0 = otherwise. Disabled by default.'
+          tags:
+            - tag: component
+              value: probe
+            - tag: source
+              value: zabbig
+        - uuid: bf4e9192088f4a48af04f3c5703781ef
+          name: 'zabbig client: collectors failed'
+          type: TRAP
+          key: zabbig.client.collectors.failed
+          delay: '0'
+          history: 7d
+          description: 'Number of collectors that failed or timed out in the last run.'
+          tags:
+            - tag: component
+              value: self-monitoring
+            - tag: source
+              value: zabbig
+          triggers:
+            - uuid: 3d7224ce520842a68e871435a2a23ba0
+              expression: 'last(/zabbig Linux Host/zabbig.client.collectors.failed)>0'
+              name: 'zabbig client collectors failing on {HOST.NAME}'
+              priority: WARNING
+              description: 'One or more collectors failed or timed out in the last run.'
+              dependencies:
+                - name: 'zabbig client run failed on {HOST.NAME}'
+                  expression: 'last(/zabbig Linux Host/zabbig.client.run.success)=0'
+        - uuid: a904fbc05e724a60b4d281bfe8e99b35
+          name: 'zabbig client: collectors total'
+          type: TRAP
+          key: zabbig.client.collectors.total
+          delay: '0'
+          history: 7d
+          description: 'Total number of enabled collectors in the last run.'
+          tags:
+            - tag: component
+              value: self-monitoring
+            - tag: source
+              value: zabbig
+        - uuid: 9f62241d11504ed98f7e77e8595313a3
+          name: 'zabbig client: run duration (ms)'
+          type: TRAP
+          key: zabbig.client.duration_ms
+          delay: '0'
+          history: 7d
+          description: 'Wall-clock duration of the last client run in milliseconds.'
+          tags:
+            - tag: component
+              value: self-monitoring
+            - tag: source
+              value: zabbig
+        - uuid: cb680a1aa8984b06b65401042065e193
+          name: 'zabbig client: metrics sent'
+          type: TRAP
+          key: zabbig.client.metrics.sent
+          delay: '0'
+          history: 7d
+          description: 'Total number of metric values successfully accepted by Zabbix in the last run.'
+          tags:
+            - tag: component
+              value: self-monitoring
+            - tag: source
+              value: zabbig
+        - uuid: 9c9ad09f6d7943c99efdbcd3b756fa3b
+          name: 'zabbig client: run success'
+          type: TRAP
+          key: zabbig.client.run.success
+          delay: '0'
+          history: 7d
+          description: '1 = last run completed successfully, 0 = run ended with failures.'
+          tags:
+            - tag: component
+              value: self-monitoring
+            - tag: source
+              value: zabbig
+          triggers:
+            - uuid: 92b9e226c2574d9fb612bf11e3af2fc0
+              expression: 'nodata(/zabbig Linux Host/zabbig.client.run.success,15m)=1'
+              name: 'zabbig client not sending data on {HOST.NAME}'
+              priority: AVERAGE
+              description: 'No data received from zabbig_client in the last 15 minutes. Client may have stopped or crashed.'
+            - uuid: c68e0db7ad824a71a55ccc769b7c6341
+              expression: 'last(/zabbig Linux Host/zabbig.client.run.success)=0'
+              name: 'zabbig client run failed on {HOST.NAME}'
+              priority: WARNING
+              description: 'The last zabbig_client run ended with failures. Check the client logs.'
+      dashboards:
+        - uuid: f66c33c714a849398485451c1c0914c7
+          name: 'zabbig Linux Host Overview'
+          pages:
+            - name: Overview
+              widgets:
+                - type: problems
+                  name: 'Active Problems'
+                  width: '24'
+                  height: '4'
+                  fields:
+                    - type: INTEGER
+                      name: show_lines
+                      value: '25'
+                    - type: INTEGER
+                      name: sort_triggers
+                      value: '3'
+                - type: svggraph
+                  name: 'CPU Utilisation %'
+                  'y': '4'
+                  width: '12'
+                  height: '4'
+                  fields:
+                    - type: STRING
+                      name: ds.0.color
+                      value: 1A7C11
+                    - type: STRING
+                      name: ds.0.hosts.0
+                      value: 'zabbig Linux Host'
+                    - type: STRING
+                      name: ds.0.items.0
+                      value: 'CPU utilisation %'
+                    - type: STRING
+                      name: reference
+                      value: PBQYW
+                    - type: INTEGER
+                      name: righty
+                      value: '0'
+                - type: svggraph
+                  name: 'Memory Used %'
+                  'y': '8'
+                  width: '8'
+                  height: '4'
+                  fields:
+                    - type: STRING
+                      name: ds.0.color
+                      value: 1A7C11
+                    - type: STRING
+                      name: ds.0.hosts.0
+                      value: 'zabbig Linux Host'
+                    - type: STRING
+                      name: ds.0.items.0
+                      value: 'Memory used %'
+                    - type: STRING
+                      name: reference
+                      value: KF9HY
+                    - type: INTEGER
+                      name: righty
+                      value: '0'
+                - type: svggraph
+                  name: 'Disk / Used %'
+                  'y': '12'
+                  width: '8'
+                  height: '4'
+                  fields:
+                    - type: STRING
+                      name: ds.0.color
+                      value: 1A7C11
+                    - type: STRING
+                      name: ds.0.hosts.0
+                      value: 'zabbig Linux Host'
+                    - type: STRING
+                      name: ds.0.items.0
+                      value: 'Disk / used %'
+                    - type: STRING
+                      name: reference
+                      value: SWGZ2
+                    - type: INTEGER
+                      name: righty
+                      value: '0'
+                - type: svggraph
+                  name: 'Swap Used %'
+                  x: '8'
+                  'y': '8'
+                  width: '8'
+                  height: '4'
+                  fields:
+                    - type: STRING
+                      name: ds.0.color
+                      value: 1A7C11
+                    - type: STRING
+                      name: ds.0.hosts.0
+                      value: 'zabbig Linux Host'
+                    - type: STRING
+                      name: ds.0.items.0
+                      value: 'Swap used %'
+                    - type: STRING
+                      name: reference
+                      value: RB65B
+                    - type: INTEGER
+                      name: righty
+                      value: '0'
+                - type: svggraph
+                  name: 'Disk / Free Bytes'
+                  x: '8'
+                  'y': '12'
+                  width: '8'
+                  height: '4'
+                  fields:
+                    - type: STRING
+                      name: ds.0.color
+                      value: 1A7C11
+                    - type: STRING
+                      name: ds.0.hosts.0
+                      value: 'zabbig Linux Host'
+                    - type: STRING
+                      name: ds.0.items.0
+                      value: 'Disk / free bytes'
+                    - type: STRING
+                      name: reference
+                      value: IRESI
+                    - type: INTEGER
+                      name: righty
+                      value: '0'
+                - type: svggraph
+                  name: 'Load Average'
+                  x: '12'
+                  'y': '4'
+                  width: '12'
+                  height: '4'
+                  fields:
+                    - type: STRING
+                      name: ds.0.color
+                      value: 1A7C11
+                    - type: STRING
+                      name: ds.0.hosts.0
+                      value: 'zabbig Linux Host'
+                    - type: STRING
+                      name: ds.0.items.0
+                      value: 'Load average 1 min'
+                    - type: STRING
+                      name: ds.1.color
+                      value: 2774A4
+                    - type: STRING
+                      name: ds.1.hosts.0
+                      value: 'zabbig Linux Host'
+                    - type: STRING
+                      name: ds.1.items.0
+                      value: 'Load average 5 min'
+                    - type: STRING
+                      name: reference
+                      value: SY1AC
+                    - type: INTEGER
+                      name: righty
+                      value: '0'
+                - type: item
+                  name: 'Memory Available'
+                  x: '16'
+                  'y': '8'
+                  width: '8'
+                  height: '4'
+                  fields:
+                    - type: INTEGER
+                      name: dynamic
+                      value: '0'
+                    - type: ITEM
+                      name: itemid
+                      value:
+                        host: 'zabbig Linux Host'
+                        key: host.memory.available_bytes
+                    - type: INTEGER
+                      name: show_description
+                      value: '1'
+                - type: svggraph
+                  name: 'Disk / Inodes Used %'
+                  x: '16'
+                  'y': '12'
+                  width: '8'
+                  height: '4'
+                  fields:
+                    - type: STRING
+                      name: ds.0.color
+                      value: 1A7C11
+                    - type: STRING
+                      name: ds.0.hosts.0
+                      value: 'zabbig Linux Host'
+                    - type: STRING
+                      name: ds.0.items.0
+                      value: 'Disk / inodes used %'
+                    - type: STRING
+                      name: reference
+                      value: YNAB5
+                    - type: INTEGER
+                      name: righty
+                      value: '0'
+            - name: 'Services & Logs'
+              widgets:
+                - type: item
+                  name: sshd
+                  width: '6'
+                  height: '3'
+                  fields:
+                    - type: INTEGER
+                      name: dynamic
+                      value: '0'
+                    - type: ITEM
+                      name: itemid
+                      value:
+                        host: 'zabbig Linux Host'
+                        key: host.service.sshd
+                    - type: INTEGER
+                      name: show_description
+                      value: '1'
+                - type: svggraph
+                  name: 'App Log: Error Detected'
+                  'y': '3'
+                  width: '12'
+                  height: '4'
+                  fields:
+                    - type: STRING
+                      name: ds.0.color
+                      value: 1A7C11
+                    - type: STRING
+                      name: ds.0.hosts.0
+                      value: 'zabbig Linux Host'
+                    - type: STRING
+                      name: ds.0.items.0
+                      value: 'App log: error detected'
+                    - type: STRING
+                      name: reference
+                      value: S8OMI
+                    - type: INTEGER
+                      name: righty
+                      value: '0'
+                - type: item
+                  name: nginx
+                  x: '6'
+                  width: '6'
+                  height: '3'
+                  fields:
+                    - type: INTEGER
+                      name: dynamic
+                      value: '0'
+                    - type: ITEM
+                      name: itemid
+                      value:
+                        host: 'zabbig Linux Host'
+                        key: host.service.nginx
+                    - type: INTEGER
+                      name: show_description
+                      value: '1'
+                - type: item
+                  name: cron
+                  x: '12'
+                  width: '6'
+                  height: '3'
+                  fields:
+                    - type: INTEGER
+                      name: dynamic
+                      value: '0'
+                    - type: ITEM
+                      name: itemid
+                      value:
+                        host: 'zabbig Linux Host'
+                        key: host.service.cron.process
+                    - type: INTEGER
+                      name: show_description
+                      value: '1'
+                - type: svggraph
+                  name: 'API Max Response Time (ms)'
+                  x: '12'
+                  'y': '3'
+                  width: '12'
+                  height: '4'
+                  fields:
+                    - type: STRING
+                      name: ds.0.color
+                      value: 1A7C11
+                    - type: STRING
+                      name: ds.0.hosts.0
+                      value: 'zabbig Linux Host'
+                    - type: STRING
+                      name: ds.0.items.0
+                      value: 'App log: max API response time (ms)'
+                    - type: STRING
+                      name: reference
+                      value: D9FEV
+                    - type: INTEGER
+                      name: righty
+                      value: '0'
+                - type: item
+                  name: 'App Log Severity'
+                  x: '18'
+                  width: '6'
+                  height: '3'
+                  fields:
+                    - type: INTEGER
+                      name: dynamic
+                      value: '0'
+                    - type: ITEM
+                      name: itemid
+                      value:
+                        host: 'zabbig Linux Host'
+                        key: app.log.severity
+                    - type: INTEGER
+                      name: show_description
+                      value: '1'
+            - name: Network
+              widgets:
+                - type: svggraph
+                  name: 'Network Throughput (bytes/sec)'
+                  width: '12'
+                  height: '5'
+                  fields:
+                    - type: STRING
+                      name: ds.0.color
+                      value: 1A7C11
+                    - type: STRING
+                      name: ds.0.hosts.0
+                      value: 'zabbig Linux Host'
+                    - type: STRING
+                      name: ds.0.items.0
+                      value: 'Network RX bytes/sec'
+                    - type: STRING
+                      name: ds.1.color
+                      value: 2774A4
+                    - type: STRING
+                      name: ds.1.hosts.0
+                      value: 'zabbig Linux Host'
+                    - type: STRING
+                      name: ds.1.items.0
+                      value: 'Network TX bytes/sec'
+                    - type: STRING
+                      name: reference
+                      value: UF5F6
+                    - type: INTEGER
+                      name: righty
+                      value: '0'
+                - type: svggraph
+                  name: 'TCP Sockets'
+                  'y': '5'
+                  width: '12'
+                  height: '4'
+                  fields:
+                    - type: STRING
+                      name: ds.0.color
+                      value: 1A7C11
+                    - type: STRING
+                      name: ds.0.hosts.0
+                      value: 'zabbig Linux Host'
+                    - type: STRING
+                      name: ds.0.items.0
+                      value: 'TCP sockets in use'
+                    - type: STRING
+                      name: ds.1.color
+                      value: 2774A4
+                    - type: STRING
+                      name: ds.1.hosts.0
+                      value: 'zabbig Linux Host'
+                    - type: STRING
+                      name: ds.1.items.0
+                      value: 'TCP sockets TIME_WAIT'
+                    - type: STRING
+                      name: reference
+                      value: XC1QR
+                    - type: INTEGER
+                      name: righty
+                      value: '0'
+                - type: svggraph
+                  name: 'Network Errors & Drops'
+                  x: '12'
+                  width: '12'
+                  height: '5'
+                  fields:
+                    - type: STRING
+                      name: ds.0.color
+                      value: 1A7C11
+                    - type: STRING
+                      name: ds.0.hosts.0
+                      value: 'zabbig Linux Host'
+                    - type: STRING
+                      name: ds.0.items.0
+                      value: 'Network RX errors'
+                    - type: STRING
+                      name: ds.1.color
+                      value: 2774A4
+                    - type: STRING
+                      name: ds.1.hosts.0
+                      value: 'zabbig Linux Host'
+                    - type: STRING
+                      name: ds.1.items.0
+                      value: 'Network TX errors'
+                    - type: STRING
+                      name: ds.2.color
+                      value: F63100
+                    - type: STRING
+                      name: ds.2.hosts.0
+                      value: 'zabbig Linux Host'
+                    - type: STRING
+                      name: ds.2.items.0
+                      value: 'Network RX dropped'
+                    - type: STRING
+                      name: ds.3.color
+                      value: A54F10
+                    - type: STRING
+                      name: ds.3.hosts.0
+                      value: 'zabbig Linux Host'
+                    - type: STRING
+                      name: ds.3.items.0
+                      value: 'Network TX dropped'
+                    - type: STRING
+                      name: reference
+                      value: W3XKK
+                    - type: INTEGER
+                      name: righty
+                      value: '0'
+                - type: item
+                  name: 'UDP Sockets'
+                  x: '12'
+                  'y': '5'
+                  width: '6'
+                  height: '4'
+                  fields:
+                    - type: INTEGER
+                      name: dynamic
+                      value: '0'
+                    - type: ITEM
+                      name: itemid
+                      value:
+                        host: 'zabbig Linux Host'
+                        key: host.net.udp_inuse
+                    - type: INTEGER
+                      name: show_description
+                      value: '1'
+            - name: 'Client Health'
+              widgets:
+                - type: item
+                  name: 'Last Run Success'
+                  width: '6'
+                  height: '3'
+                  fields:
+                    - type: INTEGER
+                      name: dynamic
+                      value: '0'
+                    - type: ITEM
+                      name: itemid
+                      value:
+                        host: 'zabbig Linux Host'
+                        key: zabbig.client.run.success
+                    - type: INTEGER
+                      name: show_description
+                      value: '1'
+                - type: svggraph
+                  name: 'Run Duration (ms)'
+                  'y': '3'
+                  width: '12'
+                  height: '4'
+                  fields:
+                    - type: STRING
+                      name: ds.0.color
+                      value: 1A7C11
+                    - type: STRING
+                      name: ds.0.hosts.0
+                      value: 'zabbig Linux Host'
+                    - type: STRING
+                      name: ds.0.items.0
+                      value: 'zabbig client: run duration (ms)'
+                    - type: STRING
+                      name: reference
+                      value: JW8CL
+                    - type: INTEGER
+                      name: righty
+                      value: '0'
+                - type: clock
+                  name: 'Server Time'
+                  'y': '7'
+                  width: '6'
+                  height: '3'
+                  fields:
+                    - type: INTEGER
+                      name: clock_type
+                      value: '0'
+                    - type: INTEGER
+                      name: time_type
+                      value: '0'
+                - type: item
+                  name: 'Collectors Failed'
+                  x: '6'
+                  width: '6'
+                  height: '3'
+                  fields:
+                    - type: INTEGER
+                      name: dynamic
+                      value: '0'
+                    - type: ITEM
+                      name: itemid
+                      value:
+                        host: 'zabbig Linux Host'
+                        key: zabbig.client.collectors.failed
+                    - type: INTEGER
+                      name: show_description
+                      value: '1'
+                - type: item
+                  name: 'Metrics Sent'
+                  x: '12'
+                  width: '6'
+                  height: '3'
+                  fields:
+                    - type: INTEGER
+                      name: dynamic
+                      value: '0'
+                    - type: ITEM
+                      name: itemid
+                      value:
+                        host: 'zabbig Linux Host'
+                        key: zabbig.client.metrics.sent
+                    - type: INTEGER
+                      name: show_description
+                      value: '1'
+                - type: svggraph
+                  name: 'Collectors Total vs Failed'
+                  x: '12'
+                  'y': '3'
+                  width: '12'
+                  height: '4'
+                  fields:
+                    - type: STRING
+                      name: ds.0.color
+                      value: 1A7C11
+                    - type: STRING
+                      name: ds.0.hosts.0
+                      value: 'zabbig Linux Host'
+                    - type: STRING
+                      name: ds.0.items.0
+                      value: 'zabbig client: collectors total'
+                    - type: STRING
+                      name: ds.1.color
+                      value: 2774A4
+                    - type: STRING
+                      name: ds.1.hosts.0
+                      value: 'zabbig Linux Host'
+                    - type: STRING
+                      name: ds.1.items.0
+                      value: 'zabbig client: collectors failed'
+                    - type: STRING
+                      name: reference
+                      value: D8A9G
+                    - type: INTEGER
+                      name: righty
+                      value: '0'
+            - name: Probes
+              widgets:
+                - type: problems
+                  name: 'Probe Problems'
+                  width: '24'
+                  height: '4'
+                  fields:
+                    - type: INTEGER
+                      name: show_lines
+                      value: '25'
+                    - type: INTEGER
+                      name: sort_triggers
+                      value: '3'
+                - type: item
+                  name: 'Google DNS (8.8.8.8:53)'
+                  'y': '4'
+                  width: '6'
+                  height: '3'
+                  fields:
+                    - type: INTEGER
+                      name: dynamic
+                      value: '0'
+                    - type: ITEM
+                      name: itemid
+                      value:
+                        host: 'zabbig Linux Host'
+                        key: probe.google.dns
+                    - type: INTEGER
+                      name: show_description
+                      value: '1'
+                - type: item
+                  name: 'GitHub API SSL Cert'
+                  'y': '7'
+                  width: '6'
+                  height: '3'
+                  fields:
+                    - type: INTEGER
+                      name: dynamic
+                      value: '0'
+                    - type: ITEM
+                      name: itemid
+                      value:
+                        host: 'zabbig Linux Host'
+                        key: probe.github.api.up.ssl_check
+                    - type: INTEGER
+                      name: show_description
+                      value: '1'
+                - type: svggraph
+                  name: 'Probe Response Times (ms)'
+                  'y': '10'
+                  width: '24'
+                  height: '5'
+                  fields:
+                    - type: STRING
+                      name: ds.0.color
+                      value: 1A7C11
+                    - type: STRING
+                      name: ds.0.hosts.0
+                      value: 'zabbig Linux Host'
+                    - type: STRING
+                      name: ds.0.items.0
+                      value: 'Probe: Google DNS response time (ms)'
+                    - type: STRING
+                      name: ds.1.color
+                      value: 2774A4
+                    - type: STRING
+                      name: ds.1.hosts.0
+                      value: 'zabbig Linux Host'
+                    - type: STRING
+                      name: ds.1.items.0
+                      value: 'Probe: GitHub API response time (ms)'
+                    - type: STRING
+                      name: reference
+                      value: Q6NE8
+                    - type: INTEGER
+                      name: righty
+                      value: '0'
+                - type: item
+                  name: 'GitHub HTTPS Port'
+                  x: '6'
+                  'y': '4'
+                  width: '6'
+                  height: '3'
+                  fields:
+                    - type: INTEGER
+                      name: dynamic
+                      value: '0'
+                    - type: ITEM
+                      name: itemid
+                      value:
+                        host: 'zabbig Linux Host'
+                        key: probe.github.https.port
+                    - type: INTEGER
+                      name: show_description
+                      value: '1'
+                - type: item
+                  name: 'GitHub API Body SSL Cert'
+                  x: '6'
+                  'y': '7'
+                  width: '6'
+                  height: '3'
+                  fields:
+                    - type: INTEGER
+                      name: dynamic
+                      value: '0'
+                    - type: ITEM
+                      name: itemid
+                      value:
+                        host: 'zabbig Linux Host'
+                        key: probe.github.api.body.ssl_check
+                    - type: INTEGER
+                      name: show_description
+                      value: '1'
+                - type: item
+                  name: 'GitHub API Status'
+                  x: '12'
+                  'y': '4'
+                  width: '6'
+                  height: '3'
+                  fields:
+                    - type: INTEGER
+                      name: dynamic
+                      value: '0'
+                    - type: ITEM
+                      name: itemid
+                      value:
+                        host: 'zabbig Linux Host'
+                        key: probe.github.api.up
+                    - type: INTEGER
+                      name: show_description
+                      value: '1'
+                - type: item
+                  name: 'GitHub API Body Check'
+                  x: '18'
+                  'y': '4'
+                  width: '6'
+                  height: '3'
+                  fields:
+                    - type: INTEGER
+                      name: dynamic
+                      value: '0'
+                    - type: ITEM
+                      name: itemid
+                      value:
+                        host: 'zabbig Linux Host'
+                        key: probe.github.api.body
+                    - type: INTEGER
+                      name: show_description
+                      value: '1'

@@ -1,0 +1,2473 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<zabbix_export>
+    <version>7.0</version>
+    <template_groups>
+        <template_group>
+            <uuid>a140aad8df6f42fbbfc7efb0bd4dbd09</uuid>
+            <name>zabbig Templates</name>
+        </template_group>
+    </template_groups>
+    <templates>
+        <template>
+            <uuid>78a1712e7ab24a1e9a44dbf04858facc</uuid>
+            <template>zabbig Linux Host</template>
+            <name>zabbig Linux Host</name>
+            <description>Host metrics collected by the zabbig_client monitoring agent.</description>
+            <groups>
+                <group>
+                    <name>zabbig Templates</name>
+                </group>
+            </groups>
+            <items>
+                <item>
+                    <uuid>0a8b5b2c334c48609164454c63b18c5b</uuid>
+                    <name>App log: max API response time (ms)</name>
+                    <type>TRAP</type>
+                    <key>app.log.api.response_time_max_ms</key>
+                    <delay>0</delay>
+                    <history>7d</history>
+                    <value_type>FLOAT</value_type>
+                    <description>Maximum response_time value seen in the access log since last scan.</description>
+                    <tags>
+                        <tag>
+                            <tag>component</tag>
+                            <value>log</value>
+                        </tag>
+                        <tag>
+                            <tag>source</tag>
+                            <value>zabbig</value>
+                        </tag>
+                    </tags>
+                    <triggers>
+                        <trigger>
+                            <uuid>709fff05a2434175be2a99ff2194473a</uuid>
+                            <expression>last(/zabbig Linux Host/app.log.api.response_time_max_ms)&gt;2000</expression>
+                            <name>Slow API response time on {HOST.NAME}</name>
+                            <priority>WARNING</priority>
+                            <description>Maximum API response time exceeded 2000 ms in the last collection window.</description>
+                        </trigger>
+                    </triggers>
+                </item>
+                <item>
+                    <uuid>9f1a0380c6804cdb94d57f9e43d0d2c1</uuid>
+                    <name>App log: error detected</name>
+                    <type>TRAP</type>
+                    <key>app.log.error</key>
+                    <delay>0</delay>
+                    <history>7d</history>
+                    <trends>0</trends>
+                    <description>1 = ERROR line appeared in the application log since last scan, 0 = clean.</description>
+                    <tags>
+                        <tag>
+                            <tag>component</tag>
+                            <value>log</value>
+                        </tag>
+                        <tag>
+                            <tag>source</tag>
+                            <value>zabbig</value>
+                        </tag>
+                    </tags>
+                    <triggers>
+                        <trigger>
+                            <uuid>842ef0c0c1f547d5b2f314939df8c59c</uuid>
+                            <expression>last(/zabbig Linux Host/app.log.error)=1</expression>
+                            <name>Application error detected on {HOST.NAME}</name>
+                            <priority>AVERAGE</priority>
+                            <description>An ERROR line was detected in the application log.</description>
+                        </trigger>
+                    </triggers>
+                </item>
+                <item>
+                    <uuid>7fbc883cde684a22beaca515ad114976</uuid>
+                    <name>App log: payment API calls total</name>
+                    <type>TRAP</type>
+                    <key>app.log.payment.calls.total</key>
+                    <delay>0</delay>
+                    <history>7d</history>
+                    <description>Cumulative count of POST /api/v1/payment lines in the access log.</description>
+                    <tags>
+                        <tag>
+                            <tag>component</tag>
+                            <value>log</value>
+                        </tag>
+                        <tag>
+                            <tag>source</tag>
+                            <value>zabbig</value>
+                        </tag>
+                    </tags>
+                </item>
+                <item>
+                    <uuid>0b25790dda4b4584928bd23c9903e405</uuid>
+                    <name>App log: severity level</name>
+                    <type>TRAP</type>
+                    <key>app.log.severity</key>
+                    <delay>0</delay>
+                    <history>7d</history>
+                    <trends>0</trends>
+                    <description>Highest severity in the application log since last scan. 3=FATAL, 2=ERROR, 1=WARN, 0=clean.</description>
+                    <tags>
+                        <tag>
+                            <tag>component</tag>
+                            <value>log</value>
+                        </tag>
+                        <tag>
+                            <tag>source</tag>
+                            <value>zabbig</value>
+                        </tag>
+                    </tags>
+                    <triggers>
+                        <trigger>
+                            <uuid>b12cde78a2924c77ba26861beffdfc00</uuid>
+                            <expression>last(/zabbig Linux Host/app.log.severity)=2</expression>
+                            <name>Application ERROR in log on {HOST.NAME}</name>
+                            <priority>AVERAGE</priority>
+                            <description>An ERROR was detected in the application log.</description>
+                            <dependencies>
+                                <dependency>
+                                    <name>Application FATAL error on {HOST.NAME}</name>
+                                    <expression>last(/zabbig Linux Host/app.log.severity)&gt;=3</expression>
+                                </dependency>
+                            </dependencies>
+                        </trigger>
+                        <trigger>
+                            <uuid>fc649a4a089a4d18bb88a51c03c5ba44</uuid>
+                            <expression>last(/zabbig Linux Host/app.log.severity)&gt;=3</expression>
+                            <name>Application FATAL error on {HOST.NAME}</name>
+                            <priority>HIGH</priority>
+                            <description>A FATAL or OutOfMemory event was detected in the application log.</description>
+                        </trigger>
+                    </triggers>
+                </item>
+                <item>
+                    <uuid>19c36b8c04ba4b6f9d99f6b403a94240</uuid>
+                    <name>Load average 1 min</name>
+                    <type>TRAP</type>
+                    <key>host.cpu.load1</key>
+                    <delay>0</delay>
+                    <history>7d</history>
+                    <value_type>FLOAT</value_type>
+                    <description>System load average over the last 1 minute.</description>
+                    <tags>
+                        <tag>
+                            <tag>component</tag>
+                            <value>cpu</value>
+                        </tag>
+                        <tag>
+                            <tag>source</tag>
+                            <value>zabbig</value>
+                        </tag>
+                    </tags>
+                    <triggers>
+                        <trigger>
+                            <uuid>142a4d2dba8c4164ac4db8062cd1d896</uuid>
+                            <expression>last(/zabbig Linux Host/host.cpu.load1)&gt;10</expression>
+                            <name>High 1-min load average on {HOST.NAME}</name>
+                            <priority>WARNING</priority>
+                            <description>1-minute load average exceeds 10. Adjust threshold to match server core count.</description>
+                        </trigger>
+                    </triggers>
+                </item>
+                <item>
+                    <uuid>30e8fdf321514eb88c6d9fcf0fc4e474</uuid>
+                    <name>Load average 5 min</name>
+                    <type>TRAP</type>
+                    <key>host.cpu.load5</key>
+                    <delay>0</delay>
+                    <history>7d</history>
+                    <value_type>FLOAT</value_type>
+                    <description>System load average over the last 5 minutes.</description>
+                    <tags>
+                        <tag>
+                            <tag>component</tag>
+                            <value>cpu</value>
+                        </tag>
+                        <tag>
+                            <tag>source</tag>
+                            <value>zabbig</value>
+                        </tag>
+                    </tags>
+                </item>
+                <item>
+                    <uuid>0be6283396884d4ba424fd49f04e2ada</uuid>
+                    <name>Load average 15 min</name>
+                    <type>TRAP</type>
+                    <key>host.cpu.load15</key>
+                    <delay>0</delay>
+                    <history>7d</history>
+                    <value_type>FLOAT</value_type>
+                    <description>System load average over the last 15 minutes.</description>
+                    <tags>
+                        <tag>
+                            <tag>component</tag>
+                            <value>cpu</value>
+                        </tag>
+                        <tag>
+                            <tag>source</tag>
+                            <value>zabbig</value>
+                        </tag>
+                    </tags>
+                </item>
+                <item>
+                    <uuid>c5b788024a3e4e5598df4b424ca8c763</uuid>
+                    <name>CPU utilisation %</name>
+                    <type>TRAP</type>
+                    <key>host.cpu.util</key>
+                    <delay>0</delay>
+                    <history>7d</history>
+                    <value_type>FLOAT</value_type>
+                    <description>Total CPU utilisation across all cores (two /proc/stat reads, 200 ms apart).</description>
+                    <tags>
+                        <tag>
+                            <tag>component</tag>
+                            <value>cpu</value>
+                        </tag>
+                        <tag>
+                            <tag>source</tag>
+                            <value>zabbig</value>
+                        </tag>
+                    </tags>
+                    <triggers>
+                        <trigger>
+                            <uuid>41448765608849d5b2ce546c6f9d2b62</uuid>
+                            <expression>min(/zabbig Linux Host/host.cpu.util,5m)&gt;95</expression>
+                            <name>Critical CPU utilisation on {HOST.NAME}</name>
+                            <priority>HIGH</priority>
+                            <description>CPU utilisation has been above 95% for the last 5 minutes.</description>
+                            <dependencies>
+                                <dependency>
+                                    <name>High CPU utilisation on {HOST.NAME}</name>
+                                    <expression>min(/zabbig Linux Host/host.cpu.util,5m)&gt;85</expression>
+                                </dependency>
+                            </dependencies>
+                        </trigger>
+                        <trigger>
+                            <uuid>07e2a0c573704de0a32522319d8cb945</uuid>
+                            <expression>min(/zabbig Linux Host/host.cpu.util,5m)&gt;85</expression>
+                            <name>High CPU utilisation on {HOST.NAME}</name>
+                            <priority>WARNING</priority>
+                            <description>CPU utilisation has been above 85% for the last 5 minutes.</description>
+                        </trigger>
+                    </triggers>
+                </item>
+                <item>
+                    <uuid>5cbe1b9ef8e3473ea4802b645b3fea3e</uuid>
+                    <name>Disk /data used %</name>
+                    <type>TRAP</type>
+                    <key>host.disk.data.used_percent</key>
+                    <delay>0</delay>
+                    <history>7d</history>
+                    <value_type>FLOAT</value_type>
+                    <description>Percentage of /data filesystem blocks in use.</description>
+                    <tags>
+                        <tag>
+                            <tag>component</tag>
+                            <value>disk</value>
+                        </tag>
+                        <tag>
+                            <tag>source</tag>
+                            <value>zabbig</value>
+                        </tag>
+                    </tags>
+                </item>
+                <item>
+                    <uuid>6c61803cc56a481a9c130e40b87f1380</uuid>
+                    <name>Disk / free bytes</name>
+                    <type>TRAP</type>
+                    <key>host.disk.root.free_bytes</key>
+                    <delay>0</delay>
+                    <history>7d</history>
+                    <description>Bytes available to non-root users on the root filesystem.</description>
+                    <tags>
+                        <tag>
+                            <tag>component</tag>
+                            <value>disk</value>
+                        </tag>
+                        <tag>
+                            <tag>source</tag>
+                            <value>zabbig</value>
+                        </tag>
+                    </tags>
+                </item>
+                <item>
+                    <uuid>99408ebe92624320802f3c3e89400665</uuid>
+                    <name>Disk / inodes free</name>
+                    <type>TRAP</type>
+                    <key>host.disk.root.inodes_free</key>
+                    <delay>0</delay>
+                    <history>7d</history>
+                    <description>Number of free inode slots on the root filesystem.</description>
+                    <tags>
+                        <tag>
+                            <tag>component</tag>
+                            <value>disk</value>
+                        </tag>
+                        <tag>
+                            <tag>source</tag>
+                            <value>zabbig</value>
+                        </tag>
+                    </tags>
+                </item>
+                <item>
+                    <uuid>de2af6c0d7ef4afc9a6ce02454a40c8b</uuid>
+                    <name>Disk / inodes total</name>
+                    <type>TRAP</type>
+                    <key>host.disk.root.inodes_total</key>
+                    <delay>0</delay>
+                    <history>7d</history>
+                    <description>Total inode slots on the root filesystem.</description>
+                    <tags>
+                        <tag>
+                            <tag>component</tag>
+                            <value>disk</value>
+                        </tag>
+                        <tag>
+                            <tag>source</tag>
+                            <value>zabbig</value>
+                        </tag>
+                    </tags>
+                </item>
+                <item>
+                    <uuid>0aa76a5a6fef4a16a012e5d13761a304</uuid>
+                    <name>Disk / inodes used</name>
+                    <type>TRAP</type>
+                    <key>host.disk.root.inodes_used</key>
+                    <delay>0</delay>
+                    <history>7d</history>
+                    <description>Number of inode slots in use on the root filesystem.</description>
+                    <tags>
+                        <tag>
+                            <tag>component</tag>
+                            <value>disk</value>
+                        </tag>
+                        <tag>
+                            <tag>source</tag>
+                            <value>zabbig</value>
+                        </tag>
+                    </tags>
+                </item>
+                <item>
+                    <uuid>d12407d589b04f5ea1d9ed9d5f08aa40</uuid>
+                    <name>Disk / inodes used %</name>
+                    <type>TRAP</type>
+                    <key>host.disk.root.inodes_used_percent</key>
+                    <delay>0</delay>
+                    <history>7d</history>
+                    <value_type>FLOAT</value_type>
+                    <description>Percentage of inode slots in use on the root filesystem.</description>
+                    <tags>
+                        <tag>
+                            <tag>component</tag>
+                            <value>disk</value>
+                        </tag>
+                        <tag>
+                            <tag>source</tag>
+                            <value>zabbig</value>
+                        </tag>
+                    </tags>
+                    <triggers>
+                        <trigger>
+                            <uuid>0b201acdcfb34569b86759353586744b</uuid>
+                            <expression>last(/zabbig Linux Host/host.disk.root.inodes_used_percent)&gt;95</expression>
+                            <name>Inode exhaustion critical on {HOST.NAME}</name>
+                            <priority>HIGH</priority>
+                            <description>Root filesystem inode usage above 95%.</description>
+                            <dependencies>
+                                <dependency>
+                                    <name>Inode exhaustion warning on {HOST.NAME}</name>
+                                    <expression>last(/zabbig Linux Host/host.disk.root.inodes_used_percent)&gt;80</expression>
+                                </dependency>
+                            </dependencies>
+                        </trigger>
+                        <trigger>
+                            <uuid>3963d45da1cb4c22803e90745a7632bf</uuid>
+                            <expression>last(/zabbig Linux Host/host.disk.root.inodes_used_percent)&gt;80</expression>
+                            <name>Inode exhaustion warning on {HOST.NAME}</name>
+                            <priority>WARNING</priority>
+                            <description>Root filesystem inode usage above 80%. Inode exhaustion prevents new file creation even when disk space is available.</description>
+                        </trigger>
+                    </triggers>
+                </item>
+                <item>
+                    <uuid>351d03f25b39470ea551e0aacae6714c</uuid>
+                    <name>Disk / used bytes</name>
+                    <type>TRAP</type>
+                    <key>host.disk.root.used_bytes</key>
+                    <delay>0</delay>
+                    <history>7d</history>
+                    <description>Bytes currently used on the root filesystem.</description>
+                    <tags>
+                        <tag>
+                            <tag>component</tag>
+                            <value>disk</value>
+                        </tag>
+                        <tag>
+                            <tag>source</tag>
+                            <value>zabbig</value>
+                        </tag>
+                    </tags>
+                </item>
+                <item>
+                    <uuid>dddf21374cb147e7b880953d52a97a3b</uuid>
+                    <name>Disk / used %</name>
+                    <type>TRAP</type>
+                    <key>host.disk.root.used_percent</key>
+                    <delay>0</delay>
+                    <history>7d</history>
+                    <value_type>FLOAT</value_type>
+                    <description>Percentage of root filesystem blocks in use.</description>
+                    <tags>
+                        <tag>
+                            <tag>component</tag>
+                            <value>disk</value>
+                        </tag>
+                        <tag>
+                            <tag>source</tag>
+                            <value>zabbig</value>
+                        </tag>
+                    </tags>
+                    <triggers>
+                        <trigger>
+                            <uuid>5d1fb34585724535b698ff22ef24baf9</uuid>
+                            <expression>last(/zabbig Linux Host/host.disk.root.used_percent)&gt;80</expression>
+                            <name>Disk / above 80% on {HOST.NAME}</name>
+                            <priority>WARNING</priority>
+                            <description>Root filesystem is more than 80% full.</description>
+                        </trigger>
+                        <trigger>
+                            <uuid>a3d18f1c082e4a86a53a83e5446ab86e</uuid>
+                            <expression>last(/zabbig Linux Host/host.disk.root.used_percent)&gt;90</expression>
+                            <name>Disk / above 90% on {HOST.NAME}</name>
+                            <priority>HIGH</priority>
+                            <description>Root filesystem is more than 90% full.</description>
+                            <dependencies>
+                                <dependency>
+                                    <name>Disk / above 80% on {HOST.NAME}</name>
+                                    <expression>last(/zabbig Linux Host/host.disk.root.used_percent)&gt;80</expression>
+                                </dependency>
+                            </dependencies>
+                        </trigger>
+                    </triggers>
+                </item>
+                <item>
+                    <uuid>7108a5245a3f4c45811d6c87853957ad</uuid>
+                    <name>Memory available bytes</name>
+                    <type>TRAP</type>
+                    <key>host.memory.available_bytes</key>
+                    <delay>0</delay>
+                    <history>7d</history>
+                    <description>Bytes of RAM available for new allocations without swapping (MemAvailable).</description>
+                    <tags>
+                        <tag>
+                            <tag>component</tag>
+                            <value>memory</value>
+                        </tag>
+                        <tag>
+                            <tag>source</tag>
+                            <value>zabbig</value>
+                        </tag>
+                    </tags>
+                </item>
+                <item>
+                    <uuid>c102f3d8fe1143b8a49c707f3b4549e7</uuid>
+                    <name>Swap used %</name>
+                    <type>TRAP</type>
+                    <key>host.memory.swap_used_percent</key>
+                    <delay>0</delay>
+                    <history>7d</history>
+                    <value_type>FLOAT</value_type>
+                    <description>Percentage of swap in use. Reports 0 when no swap is configured.</description>
+                    <tags>
+                        <tag>
+                            <tag>component</tag>
+                            <value>memory</value>
+                        </tag>
+                        <tag>
+                            <tag>source</tag>
+                            <value>zabbig</value>
+                        </tag>
+                    </tags>
+                    <triggers>
+                        <trigger>
+                            <uuid>24a11e9279134ef6b3af10247979e95a</uuid>
+                            <expression>min(/zabbig Linux Host/host.memory.swap_used_percent,5m)&gt;20</expression>
+                            <name>Swap in use on {HOST.NAME}</name>
+                            <priority>WARNING</priority>
+                            <description>Swap usage has been above 20% for the last 5 minutes.</description>
+                        </trigger>
+                    </triggers>
+                </item>
+                <item>
+                    <uuid>6a7cd21d02fd4c6c83c56dfc963fe466</uuid>
+                    <name>Memory used %</name>
+                    <type>TRAP</type>
+                    <key>host.memory.used_percent</key>
+                    <delay>0</delay>
+                    <history>7d</history>
+                    <value_type>FLOAT</value_type>
+                    <description>Percentage of RAM in use. Uses MemAvailable (not MemFree) for accuracy.</description>
+                    <tags>
+                        <tag>
+                            <tag>component</tag>
+                            <value>memory</value>
+                        </tag>
+                        <tag>
+                            <tag>source</tag>
+                            <value>zabbig</value>
+                        </tag>
+                    </tags>
+                    <triggers>
+                        <trigger>
+                            <uuid>a6bbe366b0cd499abfbb729c134bc296</uuid>
+                            <expression>min(/zabbig Linux Host/host.memory.used_percent,5m)&gt;95</expression>
+                            <name>Critical memory usage on {HOST.NAME}</name>
+                            <priority>HIGH</priority>
+                            <description>Memory usage has been above 95% for the last 5 minutes.</description>
+                            <dependencies>
+                                <dependency>
+                                    <name>High memory usage on {HOST.NAME}</name>
+                                    <expression>min(/zabbig Linux Host/host.memory.used_percent,5m)&gt;85</expression>
+                                </dependency>
+                            </dependencies>
+                        </trigger>
+                        <trigger>
+                            <uuid>66cbb5cd972d44539c79f2b113e6c83b</uuid>
+                            <expression>min(/zabbig Linux Host/host.memory.used_percent,5m)&gt;85</expression>
+                            <name>High memory usage on {HOST.NAME}</name>
+                            <priority>WARNING</priority>
+                            <description>Memory usage has been above 85% for the last 5 minutes.</description>
+                        </trigger>
+                    </triggers>
+                </item>
+                <item>
+                    <uuid>62ac5448e44e411d90a9f14155568514</uuid>
+                    <name>eth0 RX bytes/sec</name>
+                    <type>TRAP</type>
+                    <key>host.net.eth0.rx_bytes_per_sec</key>
+                    <delay>0</delay>
+                    <history>7d</history>
+                    <value_type>FLOAT</value_type>
+                    <description>Inbound throughput for eth0 in bytes/sec.</description>
+                    <tags>
+                        <tag>
+                            <tag>component</tag>
+                            <value>network</value>
+                        </tag>
+                        <tag>
+                            <tag>source</tag>
+                            <value>zabbig</value>
+                        </tag>
+                    </tags>
+                </item>
+                <item>
+                    <uuid>960fd5a31d1f4d14b603792ff576c91b</uuid>
+                    <name>eth0 TX bytes/sec</name>
+                    <type>TRAP</type>
+                    <key>host.net.eth0.tx_bytes_per_sec</key>
+                    <delay>0</delay>
+                    <history>7d</history>
+                    <value_type>FLOAT</value_type>
+                    <description>Outbound throughput for eth0 in bytes/sec.</description>
+                    <tags>
+                        <tag>
+                            <tag>component</tag>
+                            <value>network</value>
+                        </tag>
+                        <tag>
+                            <tag>source</tag>
+                            <value>zabbig</value>
+                        </tag>
+                    </tags>
+                </item>
+                <item>
+                    <uuid>2bab290e5dae40388c6b1b78c31134c8</uuid>
+                    <name>Network RX bytes/sec</name>
+                    <type>TRAP</type>
+                    <key>host.net.rx_bytes_per_sec</key>
+                    <delay>0</delay>
+                    <history>7d</history>
+                    <value_type>FLOAT</value_type>
+                    <description>Inbound throughput in bytes/sec across all non-loopback interfaces.</description>
+                    <tags>
+                        <tag>
+                            <tag>component</tag>
+                            <value>network</value>
+                        </tag>
+                        <tag>
+                            <tag>source</tag>
+                            <value>zabbig</value>
+                        </tag>
+                    </tags>
+                </item>
+                <item>
+                    <uuid>bb979a41f1184adabbcf48c2d12732bc</uuid>
+                    <name>Network RX dropped</name>
+                    <type>TRAP</type>
+                    <key>host.net.rx_dropped</key>
+                    <delay>0</delay>
+                    <history>7d</history>
+                    <description>Cumulative receive packet drops since boot (kernel buffer overruns).</description>
+                    <tags>
+                        <tag>
+                            <tag>component</tag>
+                            <value>network</value>
+                        </tag>
+                        <tag>
+                            <tag>source</tag>
+                            <value>zabbig</value>
+                        </tag>
+                    </tags>
+                    <triggers>
+                        <trigger>
+                            <uuid>282e28fcb91b405f88097d9a63b4896b</uuid>
+                            <expression>change(/zabbig Linux Host/host.net.rx_dropped)&gt;100</expression>
+                            <name>Network RX drops increasing on {HOST.NAME}</name>
+                            <priority>WARNING</priority>
+                            <description>Receive drop counter increased by more than 100. May indicate kernel buffer overruns.</description>
+                        </trigger>
+                    </triggers>
+                </item>
+                <item>
+                    <uuid>84ebdf44781b4aeba4bc2dcae01b1547</uuid>
+                    <name>Network RX errors</name>
+                    <type>TRAP</type>
+                    <key>host.net.rx_errors</key>
+                    <delay>0</delay>
+                    <history>7d</history>
+                    <description>Cumulative receive errors since boot across all non-loopback interfaces.</description>
+                    <tags>
+                        <tag>
+                            <tag>component</tag>
+                            <value>network</value>
+                        </tag>
+                        <tag>
+                            <tag>source</tag>
+                            <value>zabbig</value>
+                        </tag>
+                    </tags>
+                    <triggers>
+                        <trigger>
+                            <uuid>86363d40d2f8469891bb50112d039ec1</uuid>
+                            <expression>change(/zabbig Linux Host/host.net.rx_errors)&gt;100</expression>
+                            <name>Network RX errors increasing on {HOST.NAME}</name>
+                            <priority>WARNING</priority>
+                            <description>Receive error counter increased by more than 100 in the last collection cycle. May indicate NIC or cable issues.</description>
+                        </trigger>
+                    </triggers>
+                </item>
+                <item>
+                    <uuid>9ef0c9f513fe4ac3ab53628573634397</uuid>
+                    <name>TCP sockets in use</name>
+                    <type>TRAP</type>
+                    <key>host.net.tcp_inuse</key>
+                    <delay>0</delay>
+                    <history>7d</history>
+                    <description>Number of currently open TCP sockets.</description>
+                    <tags>
+                        <tag>
+                            <tag>component</tag>
+                            <value>network</value>
+                        </tag>
+                        <tag>
+                            <tag>source</tag>
+                            <value>zabbig</value>
+                        </tag>
+                    </tags>
+                </item>
+                <item>
+                    <uuid>badcc57685e74d9b86aa28bf67bef289</uuid>
+                    <name>TCP orphaned sockets</name>
+                    <type>TRAP</type>
+                    <key>host.net.tcp_orphans</key>
+                    <delay>0</delay>
+                    <history>7d</history>
+                    <description>Orphaned TCP sockets not attached to a file descriptor. Growing count indicates a socket leak.</description>
+                    <tags>
+                        <tag>
+                            <tag>component</tag>
+                            <value>network</value>
+                        </tag>
+                        <tag>
+                            <tag>source</tag>
+                            <value>zabbig</value>
+                        </tag>
+                    </tags>
+                </item>
+                <item>
+                    <uuid>1f6a702b0deb4f05a0aeb377eba3efeb</uuid>
+                    <name>TCP sockets TIME_WAIT</name>
+                    <type>TRAP</type>
+                    <key>host.net.tcp_timewait</key>
+                    <delay>0</delay>
+                    <history>7d</history>
+                    <description>TCP sockets in TIME_WAIT state. Persistently high values indicate connection churn.</description>
+                    <tags>
+                        <tag>
+                            <tag>component</tag>
+                            <value>network</value>
+                        </tag>
+                        <tag>
+                            <tag>source</tag>
+                            <value>zabbig</value>
+                        </tag>
+                    </tags>
+                    <triggers>
+                        <trigger>
+                            <uuid>fa24be7f7acd4e98a737ee349ff659f0</uuid>
+                            <expression>min(/zabbig Linux Host/host.net.tcp_timewait,10m)&gt;5000</expression>
+                            <name>High TCP TIME_WAIT on {HOST.NAME}</name>
+                            <priority>WARNING</priority>
+                            <description>TCP TIME_WAIT socket count has been above 5000 for 10 minutes. May indicate connection churn or port exhaustion.</description>
+                        </trigger>
+                    </triggers>
+                </item>
+                <item>
+                    <uuid>7b92b0272c164824a59bd4d1c73323d3</uuid>
+                    <name>Network TX bytes/sec</name>
+                    <type>TRAP</type>
+                    <key>host.net.tx_bytes_per_sec</key>
+                    <delay>0</delay>
+                    <history>7d</history>
+                    <value_type>FLOAT</value_type>
+                    <description>Outbound throughput in bytes/sec across all non-loopback interfaces.</description>
+                    <tags>
+                        <tag>
+                            <tag>component</tag>
+                            <value>network</value>
+                        </tag>
+                        <tag>
+                            <tag>source</tag>
+                            <value>zabbig</value>
+                        </tag>
+                    </tags>
+                </item>
+                <item>
+                    <uuid>e99d7f528c7143ac9efb8a4e45c8e94c</uuid>
+                    <name>Network TX dropped</name>
+                    <type>TRAP</type>
+                    <key>host.net.tx_dropped</key>
+                    <delay>0</delay>
+                    <history>7d</history>
+                    <description>Cumulative transmit packet drops since boot.</description>
+                    <tags>
+                        <tag>
+                            <tag>component</tag>
+                            <value>network</value>
+                        </tag>
+                        <tag>
+                            <tag>source</tag>
+                            <value>zabbig</value>
+                        </tag>
+                    </tags>
+                </item>
+                <item>
+                    <uuid>ba68ccfc1f9b4501b36cdd03b7593cef</uuid>
+                    <name>Network TX errors</name>
+                    <type>TRAP</type>
+                    <key>host.net.tx_errors</key>
+                    <delay>0</delay>
+                    <history>7d</history>
+                    <description>Cumulative transmit errors since boot.</description>
+                    <tags>
+                        <tag>
+                            <tag>component</tag>
+                            <value>network</value>
+                        </tag>
+                        <tag>
+                            <tag>source</tag>
+                            <value>zabbig</value>
+                        </tag>
+                    </tags>
+                </item>
+                <item>
+                    <uuid>c88e1ae170904077ac457fe52751d6ac</uuid>
+                    <name>UDP sockets in use</name>
+                    <type>TRAP</type>
+                    <key>host.net.udp_inuse</key>
+                    <delay>0</delay>
+                    <history>7d</history>
+                    <description>Number of currently open UDP sockets.</description>
+                    <tags>
+                        <tag>
+                            <tag>component</tag>
+                            <value>network</value>
+                        </tag>
+                        <tag>
+                            <tag>source</tag>
+                            <value>zabbig</value>
+                        </tag>
+                    </tags>
+                </item>
+                <item>
+                    <uuid>9d9b74fe27894adb8399f1a3eee6046f</uuid>
+                    <name>Service: cron (process check)</name>
+                    <type>TRAP</type>
+                    <key>host.service.cron.process</key>
+                    <delay>0</delay>
+                    <history>7d</history>
+                    <trends>0</trends>
+                    <description>1 = cron process found in /proc, 0 = not found.</description>
+                    <tags>
+                        <tag>
+                            <tag>component</tag>
+                            <value>service</value>
+                        </tag>
+                        <tag>
+                            <tag>source</tag>
+                            <value>zabbig</value>
+                        </tag>
+                    </tags>
+                    <triggers>
+                        <trigger>
+                            <uuid>afefdde55fbe47d0a34914d3f26125b5</uuid>
+                            <expression>last(/zabbig Linux Host/host.service.cron.process)=0</expression>
+                            <name>cron is not running on {HOST.NAME}</name>
+                            <priority>AVERAGE</priority>
+                            <description>No cron process found. Scheduled jobs will not run.</description>
+                        </trigger>
+                    </triggers>
+                </item>
+                <item>
+                    <uuid>1877dffdb75d4f69a74f2cd6ecbea9c3</uuid>
+                    <name>Service: nginx</name>
+                    <type>TRAP</type>
+                    <key>host.service.nginx</key>
+                    <delay>0</delay>
+                    <history>7d</history>
+                    <trends>0</trends>
+                    <description>1 = nginx active, 0 = not active.</description>
+                    <tags>
+                        <tag>
+                            <tag>component</tag>
+                            <value>service</value>
+                        </tag>
+                        <tag>
+                            <tag>source</tag>
+                            <value>zabbig</value>
+                        </tag>
+                    </tags>
+                    <triggers>
+                        <trigger>
+                            <uuid>3ec67a87b17143128e9b0d0909c176cf</uuid>
+                            <expression>last(/zabbig Linux Host/host.service.nginx)=0</expression>
+                            <name>nginx is down on {HOST.NAME}</name>
+                            <priority>HIGH</priority>
+                            <description>nginx is not active.</description>
+                        </trigger>
+                    </triggers>
+                </item>
+                <item>
+                    <uuid>06c68673c8934eb396bc1af9412384ab</uuid>
+                    <name>Service: sshd</name>
+                    <type>TRAP</type>
+                    <key>host.service.sshd</key>
+                    <delay>0</delay>
+                    <history>7d</history>
+                    <trends>0</trends>
+                    <description>1 = sshd active, 0 = not active.</description>
+                    <tags>
+                        <tag>
+                            <tag>component</tag>
+                            <value>service</value>
+                        </tag>
+                        <tag>
+                            <tag>source</tag>
+                            <value>zabbig</value>
+                        </tag>
+                    </tags>
+                    <triggers>
+                        <trigger>
+                            <uuid>19cba6dcc58f4bd2b1888289e7975415</uuid>
+                            <expression>last(/zabbig Linux Host/host.service.sshd)=0</expression>
+                            <name>sshd is down on {HOST.NAME}</name>
+                            <priority>DISASTER</priority>
+                            <description>sshd is not active. SSH access to the host may be unavailable.</description>
+                        </trigger>
+                    </triggers>
+                </item>
+                <item>
+                    <uuid>5e975d594a5c49b395c682f3f7df47c5</uuid>
+                    <name>System uptime</name>
+                    <type>TRAP</type>
+                    <key>host.system.uptime</key>
+                    <delay>0</delay>
+                    <history>7d</history>
+                    <value_type>FLOAT</value_type>
+                    <description>Seconds since last boot. A sudden drop indicates an unexpected reboot.</description>
+                    <tags>
+                        <tag>
+                            <tag>component</tag>
+                            <value>system</value>
+                        </tag>
+                        <tag>
+                            <tag>source</tag>
+                            <value>zabbig</value>
+                        </tag>
+                    </tags>
+                </item>
+                <item>
+                    <uuid>96a008ce37814bb49bdcb9896ed1dabd</uuid>
+                    <name>Probe: GitHub API body check</name>
+                    <type>TRAP</type>
+                    <key>probe.github.api.body</key>
+                    <delay>0</delay>
+                    <history>7d</history>
+                    <trends>0</trends>
+                    <description>1 = response body contains expected JSON key, 0 = otherwise. Checks https://api.github.com.</description>
+                    <tags>
+                        <tag>
+                            <tag>component</tag>
+                            <value>probe</value>
+                        </tag>
+                        <tag>
+                            <tag>source</tag>
+                            <value>zabbig</value>
+                        </tag>
+                    </tags>
+                    <triggers>
+                        <trigger>
+                            <uuid>cba1841caf214b4dacf54360d790b328</uuid>
+                            <expression>last(/zabbig Linux Host/probe.github.api.body)=0</expression>
+                            <name>GitHub API body check failed on {HOST.NAME}</name>
+                            <priority>AVERAGE</priority>
+                            <description>GitHub REST API response body does not contain expected JSON key. API may be returning an error page.</description>
+                        </trigger>
+                    </triggers>
+                </item>
+                <item>
+                    <uuid>4aa44b8924ee4bd78f926e113cebd490</uuid>
+                    <name>Probe: GitHub API body SSL cert</name>
+                    <type>TRAP</type>
+                    <key>probe.github.api.body.ssl_check</key>
+                    <delay>0</delay>
+                    <history>7d</history>
+                    <trends>0</trends>
+                    <description>SSL certificate validity for api.github.com (body probe). 1=valid, 0=invalid, 2=unknown.</description>
+                    <tags>
+                        <tag>
+                            <tag>component</tag>
+                            <value>probe</value>
+                        </tag>
+                        <tag>
+                            <tag>source</tag>
+                            <value>zabbig</value>
+                        </tag>
+                    </tags>
+                    <triggers>
+                        <trigger>
+                            <uuid>83459a065d954847bc3e1f9938e61c51</uuid>
+                            <expression>last(/zabbig Linux Host/probe.github.api.body.ssl_check)=0</expression>
+                            <name>GitHub API body probe SSL cert invalid on {HOST.NAME}</name>
+                            <priority>AVERAGE</priority>
+                            <description>TLS certificate for api.github.com is invalid (detected by body probe).</description>
+                            <dependencies>
+                                <dependency>
+                                    <name>GitHub API SSL certificate invalid on {HOST.NAME}</name>
+                                    <expression>last(/zabbig Linux Host/probe.github.api.up.ssl_check)=0</expression>
+                                </dependency>
+                            </dependencies>
+                        </trigger>
+                    </triggers>
+                </item>
+                <item>
+                    <uuid>db7bfceeb7054234b7e07aceb2369b06</uuid>
+                    <name>Probe: GitHub API up (http_status)</name>
+                    <type>TRAP</type>
+                    <key>probe.github.api.up</key>
+                    <delay>0</delay>
+                    <history>7d</history>
+                    <trends>0</trends>
+                    <description>1=2xx, 2=4xx, 3=5xx, 0=unreachable. Checks https://api.github.com status code.</description>
+                    <tags>
+                        <tag>
+                            <tag>component</tag>
+                            <value>probe</value>
+                        </tag>
+                        <tag>
+                            <tag>source</tag>
+                            <value>zabbig</value>
+                        </tag>
+                    </tags>
+                    <triggers>
+                        <trigger>
+                            <uuid>1f31928e51034c8d8a912399e8342ee2</uuid>
+                            <expression>last(/zabbig Linux Host/probe.github.api.up)&lt;&gt;1</expression>
+                            <name>GitHub API not returning 2xx from {HOST.NAME}</name>
+                            <priority>WARNING</priority>
+                            <description>GitHub REST API at api.github.com is not returning a 2xx status code.</description>
+                        </trigger>
+                    </triggers>
+                </item>
+                <item>
+                    <uuid>bb70d05f6d07439e8bc08d3b8a1ce4ff</uuid>
+                    <name>Probe: GitHub API response time (ms)</name>
+                    <type>TRAP</type>
+                    <key>probe.github.api.up.response_time_ms</key>
+                    <delay>0</delay>
+                    <history>7d</history>
+                    <description>HTTP round-trip time to api.github.com in milliseconds. 0 when probe fails.</description>
+                    <tags>
+                        <tag>
+                            <tag>component</tag>
+                            <value>probe</value>
+                        </tag>
+                        <tag>
+                            <tag>source</tag>
+                            <value>zabbig</value>
+                        </tag>
+                    </tags>
+                    <triggers>
+                        <trigger>
+                            <uuid>229f86e20af2476386dbdf12c26b88ff</uuid>
+                            <expression>last(/zabbig Linux Host/probe.github.api.up.response_time_ms)&gt;3000</expression>
+                            <name>GitHub API slow response from {HOST.NAME}</name>
+                            <priority>WARNING</priority>
+                            <description>HTTP response time to api.github.com exceeded 3000 ms.</description>
+                            <dependencies>
+                                <dependency>
+                                    <name>GitHub API not returning 2xx from {HOST.NAME}</name>
+                                    <expression>last(/zabbig Linux Host/probe.github.api.up)&lt;&gt;1</expression>
+                                </dependency>
+                            </dependencies>
+                        </trigger>
+                    </triggers>
+                </item>
+                <item>
+                    <uuid>a572ec16b8af4cb4ab19ce2aea45f488</uuid>
+                    <name>Probe: GitHub API SSL cert</name>
+                    <type>TRAP</type>
+                    <key>probe.github.api.up.ssl_check</key>
+                    <delay>0</delay>
+                    <history>7d</history>
+                    <trends>0</trends>
+                    <description>SSL certificate validity for api.github.com. 1=valid, 0=invalid, 2=unknown.</description>
+                    <tags>
+                        <tag>
+                            <tag>component</tag>
+                            <value>probe</value>
+                        </tag>
+                        <tag>
+                            <tag>source</tag>
+                            <value>zabbig</value>
+                        </tag>
+                    </tags>
+                    <triggers>
+                        <trigger>
+                            <uuid>262ad5da3e324c639d332b2cf387ed3f</uuid>
+                            <expression>last(/zabbig Linux Host/probe.github.api.up.ssl_check)=0</expression>
+                            <name>GitHub API SSL certificate invalid on {HOST.NAME}</name>
+                            <priority>AVERAGE</priority>
+                            <description>TLS certificate for api.github.com is invalid (expired, hostname mismatch, or untrusted CA).</description>
+                        </trigger>
+                        <trigger>
+                            <uuid>a088a083e6704f1ebfeba211e0d517a4</uuid>
+                            <expression>last(/zabbig Linux Host/probe.github.api.up.ssl_check)=2</expression>
+                            <name>GitHub API SSL certificate unknown on {HOST.NAME}</name>
+                            <priority>WARNING</priority>
+                            <description>Could not verify TLS certificate for api.github.com. Host may be unreachable or using an unexpected TLS version.</description>
+                            <dependencies>
+                                <dependency>
+                                    <name>GitHub API SSL certificate invalid on {HOST.NAME}</name>
+                                    <expression>last(/zabbig Linux Host/probe.github.api.up.ssl_check)=0</expression>
+                                </dependency>
+                            </dependencies>
+                        </trigger>
+                    </triggers>
+                </item>
+                <item>
+                    <uuid>93af85d771ff4fda9b39abe39b64d596</uuid>
+                    <name>Probe: GitHub HTTPS port (github.com:443)</name>
+                    <type>TRAP</type>
+                    <key>probe.github.https.port</key>
+                    <delay>0</delay>
+                    <history>7d</history>
+                    <trends>0</trends>
+                    <description>1 = TCP port 443 on github.com is reachable, 0 = not reachable.</description>
+                    <tags>
+                        <tag>
+                            <tag>component</tag>
+                            <value>probe</value>
+                        </tag>
+                        <tag>
+                            <tag>source</tag>
+                            <value>zabbig</value>
+                        </tag>
+                    </tags>
+                    <triggers>
+                        <trigger>
+                            <uuid>ca00f59e4bcc43cdbbd961a26396b637</uuid>
+                            <expression>last(/zabbig Linux Host/probe.github.https.port)=0</expression>
+                            <name>GitHub HTTPS port unreachable from {HOST.NAME}</name>
+                            <priority>WARNING</priority>
+                            <description>TCP port 443 on github.com is not reachable. Outbound HTTPS traffic may be blocked.</description>
+                        </trigger>
+                    </triggers>
+                </item>
+                <item>
+                    <uuid>ea61fd525c5a46a59046c18636acdeb5</uuid>
+                    <name>Probe: Google DNS (8.8.8.8:53)</name>
+                    <type>TRAP</type>
+                    <key>probe.google.dns</key>
+                    <delay>0</delay>
+                    <history>7d</history>
+                    <trends>0</trends>
+                    <description>1 = TCP port 53 on 8.8.8.8 is reachable, 0 = not reachable. Basic outbound connectivity indicator.</description>
+                    <tags>
+                        <tag>
+                            <tag>component</tag>
+                            <value>probe</value>
+                        </tag>
+                        <tag>
+                            <tag>source</tag>
+                            <value>zabbig</value>
+                        </tag>
+                    </tags>
+                    <triggers>
+                        <trigger>
+                            <uuid>59bd3b4ba4644a309acefb1fc09995b2</uuid>
+                            <expression>last(/zabbig Linux Host/probe.google.dns)=0</expression>
+                            <name>Google DNS unreachable from {HOST.NAME}</name>
+                            <priority>WARNING</priority>
+                            <description>TCP port 53 on 8.8.8.8 is not reachable. May indicate a network outage or DNS filtering.</description>
+                        </trigger>
+                    </triggers>
+                </item>
+                <item>
+                    <uuid>97dc5b4bc65f428481825b3c64fcdd61</uuid>
+                    <name>Probe: Google DNS response time (ms)</name>
+                    <type>TRAP</type>
+                    <key>probe.google.dns.response_time_ms</key>
+                    <delay>0</delay>
+                    <history>7d</history>
+                    <description>TCP round-trip time to 8.8.8.8:53 in milliseconds. 0 when probe fails.</description>
+                    <tags>
+                        <tag>
+                            <tag>component</tag>
+                            <value>probe</value>
+                        </tag>
+                        <tag>
+                            <tag>source</tag>
+                            <value>zabbig</value>
+                        </tag>
+                    </tags>
+                </item>
+                <item>
+                    <uuid>1eceddc5fa044738a74b0cbaaf14bfdb</uuid>
+                    <name>Probe: httpbin JSON body check</name>
+                    <type>TRAP</type>
+                    <key>probe.httpbin.json.body</key>
+                    <delay>0</delay>
+                    <history>7d</history>
+                    <trends>0</trends>
+                    <description>1 = https://httpbin.org/json contains expected JSON structure. Disabled by default.</description>
+                    <tags>
+                        <tag>
+                            <tag>component</tag>
+                            <value>probe</value>
+                        </tag>
+                        <tag>
+                            <tag>source</tag>
+                            <value>zabbig</value>
+                        </tag>
+                    </tags>
+                </item>
+                <item>
+                    <uuid>fff4b82c68c746ed92e6aa20b6d38b12</uuid>
+                    <name>Probe: httpbin JSON response time (ms)</name>
+                    <type>TRAP</type>
+                    <key>probe.httpbin.json.body.response_time_ms</key>
+                    <delay>0</delay>
+                    <history>7d</history>
+                    <description>HTTP round-trip time to httpbin.org/json in milliseconds. Disabled by default.</description>
+                    <tags>
+                        <tag>
+                            <tag>component</tag>
+                            <value>probe</value>
+                        </tag>
+                        <tag>
+                            <tag>source</tag>
+                            <value>zabbig</value>
+                        </tag>
+                    </tags>
+                </item>
+                <item>
+                    <uuid>b829a705e9cf4624b15739813c7dd60e</uuid>
+                    <name>Probe: httpbin 200 check</name>
+                    <type>TRAP</type>
+                    <key>probe.httpbin.status.200</key>
+                    <delay>0</delay>
+                    <history>7d</history>
+                    <trends>0</trends>
+                    <description>1 = https://httpbin.org/status/200 returns 2xx, 0 = otherwise. Disabled by default.</description>
+                    <tags>
+                        <tag>
+                            <tag>component</tag>
+                            <value>probe</value>
+                        </tag>
+                        <tag>
+                            <tag>source</tag>
+                            <value>zabbig</value>
+                        </tag>
+                    </tags>
+                </item>
+                <item>
+                    <uuid>bf4e9192088f4a48af04f3c5703781ef</uuid>
+                    <name>zabbig client: collectors failed</name>
+                    <type>TRAP</type>
+                    <key>zabbig.client.collectors.failed</key>
+                    <delay>0</delay>
+                    <history>7d</history>
+                    <description>Number of collectors that failed or timed out in the last run.</description>
+                    <tags>
+                        <tag>
+                            <tag>component</tag>
+                            <value>self-monitoring</value>
+                        </tag>
+                        <tag>
+                            <tag>source</tag>
+                            <value>zabbig</value>
+                        </tag>
+                    </tags>
+                    <triggers>
+                        <trigger>
+                            <uuid>3d7224ce520842a68e871435a2a23ba0</uuid>
+                            <expression>last(/zabbig Linux Host/zabbig.client.collectors.failed)&gt;0</expression>
+                            <name>zabbig client collectors failing on {HOST.NAME}</name>
+                            <priority>WARNING</priority>
+                            <description>One or more collectors failed or timed out in the last run.</description>
+                            <dependencies>
+                                <dependency>
+                                    <name>zabbig client run failed on {HOST.NAME}</name>
+                                    <expression>last(/zabbig Linux Host/zabbig.client.run.success)=0</expression>
+                                </dependency>
+                            </dependencies>
+                        </trigger>
+                    </triggers>
+                </item>
+                <item>
+                    <uuid>a904fbc05e724a60b4d281bfe8e99b35</uuid>
+                    <name>zabbig client: collectors total</name>
+                    <type>TRAP</type>
+                    <key>zabbig.client.collectors.total</key>
+                    <delay>0</delay>
+                    <history>7d</history>
+                    <description>Total number of enabled collectors in the last run.</description>
+                    <tags>
+                        <tag>
+                            <tag>component</tag>
+                            <value>self-monitoring</value>
+                        </tag>
+                        <tag>
+                            <tag>source</tag>
+                            <value>zabbig</value>
+                        </tag>
+                    </tags>
+                </item>
+                <item>
+                    <uuid>9f62241d11504ed98f7e77e8595313a3</uuid>
+                    <name>zabbig client: run duration (ms)</name>
+                    <type>TRAP</type>
+                    <key>zabbig.client.duration_ms</key>
+                    <delay>0</delay>
+                    <history>7d</history>
+                    <description>Wall-clock duration of the last client run in milliseconds.</description>
+                    <tags>
+                        <tag>
+                            <tag>component</tag>
+                            <value>self-monitoring</value>
+                        </tag>
+                        <tag>
+                            <tag>source</tag>
+                            <value>zabbig</value>
+                        </tag>
+                    </tags>
+                </item>
+                <item>
+                    <uuid>cb680a1aa8984b06b65401042065e193</uuid>
+                    <name>zabbig client: metrics sent</name>
+                    <type>TRAP</type>
+                    <key>zabbig.client.metrics.sent</key>
+                    <delay>0</delay>
+                    <history>7d</history>
+                    <description>Total number of metric values successfully accepted by Zabbix in the last run.</description>
+                    <tags>
+                        <tag>
+                            <tag>component</tag>
+                            <value>self-monitoring</value>
+                        </tag>
+                        <tag>
+                            <tag>source</tag>
+                            <value>zabbig</value>
+                        </tag>
+                    </tags>
+                </item>
+                <item>
+                    <uuid>9c9ad09f6d7943c99efdbcd3b756fa3b</uuid>
+                    <name>zabbig client: run success</name>
+                    <type>TRAP</type>
+                    <key>zabbig.client.run.success</key>
+                    <delay>0</delay>
+                    <history>7d</history>
+                    <description>1 = last run completed successfully, 0 = run ended with failures.</description>
+                    <tags>
+                        <tag>
+                            <tag>component</tag>
+                            <value>self-monitoring</value>
+                        </tag>
+                        <tag>
+                            <tag>source</tag>
+                            <value>zabbig</value>
+                        </tag>
+                    </tags>
+                    <triggers>
+                        <trigger>
+                            <uuid>92b9e226c2574d9fb612bf11e3af2fc0</uuid>
+                            <expression>nodata(/zabbig Linux Host/zabbig.client.run.success,15m)=1</expression>
+                            <name>zabbig client not sending data on {HOST.NAME}</name>
+                            <priority>AVERAGE</priority>
+                            <description>No data received from zabbig_client in the last 15 minutes. Client may have stopped or crashed.</description>
+                        </trigger>
+                        <trigger>
+                            <uuid>c68e0db7ad824a71a55ccc769b7c6341</uuid>
+                            <expression>last(/zabbig Linux Host/zabbig.client.run.success)=0</expression>
+                            <name>zabbig client run failed on {HOST.NAME}</name>
+                            <priority>WARNING</priority>
+                            <description>The last zabbig_client run ended with failures. Check the client logs.</description>
+                        </trigger>
+                    </triggers>
+                </item>
+            </items>
+            <dashboards>
+                <dashboard>
+                    <uuid>f66c33c714a849398485451c1c0914c7</uuid>
+                    <name>zabbig Linux Host Overview</name>
+                    <pages>
+                        <page>
+                            <name>Overview</name>
+                            <widgets>
+                                <widget>
+                                    <type>problems</type>
+                                    <name>Active Problems</name>
+                                    <width>24</width>
+                                    <height>4</height>
+                                    <fields>
+                                        <field>
+                                            <type>INTEGER</type>
+                                            <name>show_lines</name>
+                                            <value>25</value>
+                                        </field>
+                                        <field>
+                                            <type>INTEGER</type>
+                                            <name>sort_triggers</name>
+                                            <value>3</value>
+                                        </field>
+                                    </fields>
+                                </widget>
+                                <widget>
+                                    <type>svggraph</type>
+                                    <name>CPU Utilisation %</name>
+                                    <y>4</y>
+                                    <width>12</width>
+                                    <height>4</height>
+                                    <fields>
+                                        <field>
+                                            <type>STRING</type>
+                                            <name>ds.0.color</name>
+                                            <value>1A7C11</value>
+                                        </field>
+                                        <field>
+                                            <type>STRING</type>
+                                            <name>ds.0.hosts.0</name>
+                                            <value>zabbig Linux Host</value>
+                                        </field>
+                                        <field>
+                                            <type>STRING</type>
+                                            <name>ds.0.items.0</name>
+                                            <value>CPU utilisation %</value>
+                                        </field>
+                                        <field>
+                                            <type>STRING</type>
+                                            <name>reference</name>
+                                            <value>PBQYW</value>
+                                        </field>
+                                        <field>
+                                            <type>INTEGER</type>
+                                            <name>righty</name>
+                                            <value>0</value>
+                                        </field>
+                                    </fields>
+                                </widget>
+                                <widget>
+                                    <type>svggraph</type>
+                                    <name>Memory Used %</name>
+                                    <y>8</y>
+                                    <width>8</width>
+                                    <height>4</height>
+                                    <fields>
+                                        <field>
+                                            <type>STRING</type>
+                                            <name>ds.0.color</name>
+                                            <value>1A7C11</value>
+                                        </field>
+                                        <field>
+                                            <type>STRING</type>
+                                            <name>ds.0.hosts.0</name>
+                                            <value>zabbig Linux Host</value>
+                                        </field>
+                                        <field>
+                                            <type>STRING</type>
+                                            <name>ds.0.items.0</name>
+                                            <value>Memory used %</value>
+                                        </field>
+                                        <field>
+                                            <type>STRING</type>
+                                            <name>reference</name>
+                                            <value>KF9HY</value>
+                                        </field>
+                                        <field>
+                                            <type>INTEGER</type>
+                                            <name>righty</name>
+                                            <value>0</value>
+                                        </field>
+                                    </fields>
+                                </widget>
+                                <widget>
+                                    <type>svggraph</type>
+                                    <name>Disk / Used %</name>
+                                    <y>12</y>
+                                    <width>8</width>
+                                    <height>4</height>
+                                    <fields>
+                                        <field>
+                                            <type>STRING</type>
+                                            <name>ds.0.color</name>
+                                            <value>1A7C11</value>
+                                        </field>
+                                        <field>
+                                            <type>STRING</type>
+                                            <name>ds.0.hosts.0</name>
+                                            <value>zabbig Linux Host</value>
+                                        </field>
+                                        <field>
+                                            <type>STRING</type>
+                                            <name>ds.0.items.0</name>
+                                            <value>Disk / used %</value>
+                                        </field>
+                                        <field>
+                                            <type>STRING</type>
+                                            <name>reference</name>
+                                            <value>SWGZ2</value>
+                                        </field>
+                                        <field>
+                                            <type>INTEGER</type>
+                                            <name>righty</name>
+                                            <value>0</value>
+                                        </field>
+                                    </fields>
+                                </widget>
+                                <widget>
+                                    <type>svggraph</type>
+                                    <name>Swap Used %</name>
+                                    <x>8</x>
+                                    <y>8</y>
+                                    <width>8</width>
+                                    <height>4</height>
+                                    <fields>
+                                        <field>
+                                            <type>STRING</type>
+                                            <name>ds.0.color</name>
+                                            <value>1A7C11</value>
+                                        </field>
+                                        <field>
+                                            <type>STRING</type>
+                                            <name>ds.0.hosts.0</name>
+                                            <value>zabbig Linux Host</value>
+                                        </field>
+                                        <field>
+                                            <type>STRING</type>
+                                            <name>ds.0.items.0</name>
+                                            <value>Swap used %</value>
+                                        </field>
+                                        <field>
+                                            <type>STRING</type>
+                                            <name>reference</name>
+                                            <value>RB65B</value>
+                                        </field>
+                                        <field>
+                                            <type>INTEGER</type>
+                                            <name>righty</name>
+                                            <value>0</value>
+                                        </field>
+                                    </fields>
+                                </widget>
+                                <widget>
+                                    <type>svggraph</type>
+                                    <name>Disk / Free Bytes</name>
+                                    <x>8</x>
+                                    <y>12</y>
+                                    <width>8</width>
+                                    <height>4</height>
+                                    <fields>
+                                        <field>
+                                            <type>STRING</type>
+                                            <name>ds.0.color</name>
+                                            <value>1A7C11</value>
+                                        </field>
+                                        <field>
+                                            <type>STRING</type>
+                                            <name>ds.0.hosts.0</name>
+                                            <value>zabbig Linux Host</value>
+                                        </field>
+                                        <field>
+                                            <type>STRING</type>
+                                            <name>ds.0.items.0</name>
+                                            <value>Disk / free bytes</value>
+                                        </field>
+                                        <field>
+                                            <type>STRING</type>
+                                            <name>reference</name>
+                                            <value>IRESI</value>
+                                        </field>
+                                        <field>
+                                            <type>INTEGER</type>
+                                            <name>righty</name>
+                                            <value>0</value>
+                                        </field>
+                                    </fields>
+                                </widget>
+                                <widget>
+                                    <type>svggraph</type>
+                                    <name>Load Average</name>
+                                    <x>12</x>
+                                    <y>4</y>
+                                    <width>12</width>
+                                    <height>4</height>
+                                    <fields>
+                                        <field>
+                                            <type>STRING</type>
+                                            <name>ds.0.color</name>
+                                            <value>1A7C11</value>
+                                        </field>
+                                        <field>
+                                            <type>STRING</type>
+                                            <name>ds.0.hosts.0</name>
+                                            <value>zabbig Linux Host</value>
+                                        </field>
+                                        <field>
+                                            <type>STRING</type>
+                                            <name>ds.0.items.0</name>
+                                            <value>Load average 1 min</value>
+                                        </field>
+                                        <field>
+                                            <type>STRING</type>
+                                            <name>ds.1.color</name>
+                                            <value>2774A4</value>
+                                        </field>
+                                        <field>
+                                            <type>STRING</type>
+                                            <name>ds.1.hosts.0</name>
+                                            <value>zabbig Linux Host</value>
+                                        </field>
+                                        <field>
+                                            <type>STRING</type>
+                                            <name>ds.1.items.0</name>
+                                            <value>Load average 5 min</value>
+                                        </field>
+                                        <field>
+                                            <type>STRING</type>
+                                            <name>reference</name>
+                                            <value>SY1AC</value>
+                                        </field>
+                                        <field>
+                                            <type>INTEGER</type>
+                                            <name>righty</name>
+                                            <value>0</value>
+                                        </field>
+                                    </fields>
+                                </widget>
+                                <widget>
+                                    <type>item</type>
+                                    <name>Memory Available</name>
+                                    <x>16</x>
+                                    <y>8</y>
+                                    <width>8</width>
+                                    <height>4</height>
+                                    <fields>
+                                        <field>
+                                            <type>INTEGER</type>
+                                            <name>dynamic</name>
+                                            <value>0</value>
+                                        </field>
+                                        <field>
+                                            <type>ITEM</type>
+                                            <name>itemid</name>
+                                            <value>
+                                                <host>zabbig Linux Host</host>
+                                                <key>host.memory.available_bytes</key>
+                                            </value>
+                                        </field>
+                                        <field>
+                                            <type>INTEGER</type>
+                                            <name>show_description</name>
+                                            <value>1</value>
+                                        </field>
+                                    </fields>
+                                </widget>
+                                <widget>
+                                    <type>svggraph</type>
+                                    <name>Disk / Inodes Used %</name>
+                                    <x>16</x>
+                                    <y>12</y>
+                                    <width>8</width>
+                                    <height>4</height>
+                                    <fields>
+                                        <field>
+                                            <type>STRING</type>
+                                            <name>ds.0.color</name>
+                                            <value>1A7C11</value>
+                                        </field>
+                                        <field>
+                                            <type>STRING</type>
+                                            <name>ds.0.hosts.0</name>
+                                            <value>zabbig Linux Host</value>
+                                        </field>
+                                        <field>
+                                            <type>STRING</type>
+                                            <name>ds.0.items.0</name>
+                                            <value>Disk / inodes used %</value>
+                                        </field>
+                                        <field>
+                                            <type>STRING</type>
+                                            <name>reference</name>
+                                            <value>YNAB5</value>
+                                        </field>
+                                        <field>
+                                            <type>INTEGER</type>
+                                            <name>righty</name>
+                                            <value>0</value>
+                                        </field>
+                                    </fields>
+                                </widget>
+                            </widgets>
+                        </page>
+                        <page>
+                            <name>Services &amp; Logs</name>
+                            <widgets>
+                                <widget>
+                                    <type>item</type>
+                                    <name>sshd</name>
+                                    <width>6</width>
+                                    <height>3</height>
+                                    <fields>
+                                        <field>
+                                            <type>INTEGER</type>
+                                            <name>dynamic</name>
+                                            <value>0</value>
+                                        </field>
+                                        <field>
+                                            <type>ITEM</type>
+                                            <name>itemid</name>
+                                            <value>
+                                                <host>zabbig Linux Host</host>
+                                                <key>host.service.sshd</key>
+                                            </value>
+                                        </field>
+                                        <field>
+                                            <type>INTEGER</type>
+                                            <name>show_description</name>
+                                            <value>1</value>
+                                        </field>
+                                    </fields>
+                                </widget>
+                                <widget>
+                                    <type>svggraph</type>
+                                    <name>App Log: Error Detected</name>
+                                    <y>3</y>
+                                    <width>12</width>
+                                    <height>4</height>
+                                    <fields>
+                                        <field>
+                                            <type>STRING</type>
+                                            <name>ds.0.color</name>
+                                            <value>1A7C11</value>
+                                        </field>
+                                        <field>
+                                            <type>STRING</type>
+                                            <name>ds.0.hosts.0</name>
+                                            <value>zabbig Linux Host</value>
+                                        </field>
+                                        <field>
+                                            <type>STRING</type>
+                                            <name>ds.0.items.0</name>
+                                            <value>App log: error detected</value>
+                                        </field>
+                                        <field>
+                                            <type>STRING</type>
+                                            <name>reference</name>
+                                            <value>S8OMI</value>
+                                        </field>
+                                        <field>
+                                            <type>INTEGER</type>
+                                            <name>righty</name>
+                                            <value>0</value>
+                                        </field>
+                                    </fields>
+                                </widget>
+                                <widget>
+                                    <type>item</type>
+                                    <name>nginx</name>
+                                    <x>6</x>
+                                    <width>6</width>
+                                    <height>3</height>
+                                    <fields>
+                                        <field>
+                                            <type>INTEGER</type>
+                                            <name>dynamic</name>
+                                            <value>0</value>
+                                        </field>
+                                        <field>
+                                            <type>ITEM</type>
+                                            <name>itemid</name>
+                                            <value>
+                                                <host>zabbig Linux Host</host>
+                                                <key>host.service.nginx</key>
+                                            </value>
+                                        </field>
+                                        <field>
+                                            <type>INTEGER</type>
+                                            <name>show_description</name>
+                                            <value>1</value>
+                                        </field>
+                                    </fields>
+                                </widget>
+                                <widget>
+                                    <type>item</type>
+                                    <name>cron</name>
+                                    <x>12</x>
+                                    <width>6</width>
+                                    <height>3</height>
+                                    <fields>
+                                        <field>
+                                            <type>INTEGER</type>
+                                            <name>dynamic</name>
+                                            <value>0</value>
+                                        </field>
+                                        <field>
+                                            <type>ITEM</type>
+                                            <name>itemid</name>
+                                            <value>
+                                                <host>zabbig Linux Host</host>
+                                                <key>host.service.cron.process</key>
+                                            </value>
+                                        </field>
+                                        <field>
+                                            <type>INTEGER</type>
+                                            <name>show_description</name>
+                                            <value>1</value>
+                                        </field>
+                                    </fields>
+                                </widget>
+                                <widget>
+                                    <type>svggraph</type>
+                                    <name>API Max Response Time (ms)</name>
+                                    <x>12</x>
+                                    <y>3</y>
+                                    <width>12</width>
+                                    <height>4</height>
+                                    <fields>
+                                        <field>
+                                            <type>STRING</type>
+                                            <name>ds.0.color</name>
+                                            <value>1A7C11</value>
+                                        </field>
+                                        <field>
+                                            <type>STRING</type>
+                                            <name>ds.0.hosts.0</name>
+                                            <value>zabbig Linux Host</value>
+                                        </field>
+                                        <field>
+                                            <type>STRING</type>
+                                            <name>ds.0.items.0</name>
+                                            <value>App log: max API response time (ms)</value>
+                                        </field>
+                                        <field>
+                                            <type>STRING</type>
+                                            <name>reference</name>
+                                            <value>D9FEV</value>
+                                        </field>
+                                        <field>
+                                            <type>INTEGER</type>
+                                            <name>righty</name>
+                                            <value>0</value>
+                                        </field>
+                                    </fields>
+                                </widget>
+                                <widget>
+                                    <type>item</type>
+                                    <name>App Log Severity</name>
+                                    <x>18</x>
+                                    <width>6</width>
+                                    <height>3</height>
+                                    <fields>
+                                        <field>
+                                            <type>INTEGER</type>
+                                            <name>dynamic</name>
+                                            <value>0</value>
+                                        </field>
+                                        <field>
+                                            <type>ITEM</type>
+                                            <name>itemid</name>
+                                            <value>
+                                                <host>zabbig Linux Host</host>
+                                                <key>app.log.severity</key>
+                                            </value>
+                                        </field>
+                                        <field>
+                                            <type>INTEGER</type>
+                                            <name>show_description</name>
+                                            <value>1</value>
+                                        </field>
+                                    </fields>
+                                </widget>
+                            </widgets>
+                        </page>
+                        <page>
+                            <name>Network</name>
+                            <widgets>
+                                <widget>
+                                    <type>svggraph</type>
+                                    <name>Network Throughput (bytes/sec)</name>
+                                    <width>12</width>
+                                    <height>5</height>
+                                    <fields>
+                                        <field>
+                                            <type>STRING</type>
+                                            <name>ds.0.color</name>
+                                            <value>1A7C11</value>
+                                        </field>
+                                        <field>
+                                            <type>STRING</type>
+                                            <name>ds.0.hosts.0</name>
+                                            <value>zabbig Linux Host</value>
+                                        </field>
+                                        <field>
+                                            <type>STRING</type>
+                                            <name>ds.0.items.0</name>
+                                            <value>Network RX bytes/sec</value>
+                                        </field>
+                                        <field>
+                                            <type>STRING</type>
+                                            <name>ds.1.color</name>
+                                            <value>2774A4</value>
+                                        </field>
+                                        <field>
+                                            <type>STRING</type>
+                                            <name>ds.1.hosts.0</name>
+                                            <value>zabbig Linux Host</value>
+                                        </field>
+                                        <field>
+                                            <type>STRING</type>
+                                            <name>ds.1.items.0</name>
+                                            <value>Network TX bytes/sec</value>
+                                        </field>
+                                        <field>
+                                            <type>STRING</type>
+                                            <name>reference</name>
+                                            <value>UF5F6</value>
+                                        </field>
+                                        <field>
+                                            <type>INTEGER</type>
+                                            <name>righty</name>
+                                            <value>0</value>
+                                        </field>
+                                    </fields>
+                                </widget>
+                                <widget>
+                                    <type>svggraph</type>
+                                    <name>TCP Sockets</name>
+                                    <y>5</y>
+                                    <width>12</width>
+                                    <height>4</height>
+                                    <fields>
+                                        <field>
+                                            <type>STRING</type>
+                                            <name>ds.0.color</name>
+                                            <value>1A7C11</value>
+                                        </field>
+                                        <field>
+                                            <type>STRING</type>
+                                            <name>ds.0.hosts.0</name>
+                                            <value>zabbig Linux Host</value>
+                                        </field>
+                                        <field>
+                                            <type>STRING</type>
+                                            <name>ds.0.items.0</name>
+                                            <value>TCP sockets in use</value>
+                                        </field>
+                                        <field>
+                                            <type>STRING</type>
+                                            <name>ds.1.color</name>
+                                            <value>2774A4</value>
+                                        </field>
+                                        <field>
+                                            <type>STRING</type>
+                                            <name>ds.1.hosts.0</name>
+                                            <value>zabbig Linux Host</value>
+                                        </field>
+                                        <field>
+                                            <type>STRING</type>
+                                            <name>ds.1.items.0</name>
+                                            <value>TCP sockets TIME_WAIT</value>
+                                        </field>
+                                        <field>
+                                            <type>STRING</type>
+                                            <name>reference</name>
+                                            <value>XC1QR</value>
+                                        </field>
+                                        <field>
+                                            <type>INTEGER</type>
+                                            <name>righty</name>
+                                            <value>0</value>
+                                        </field>
+                                    </fields>
+                                </widget>
+                                <widget>
+                                    <type>svggraph</type>
+                                    <name>Network Errors &amp; Drops</name>
+                                    <x>12</x>
+                                    <width>12</width>
+                                    <height>5</height>
+                                    <fields>
+                                        <field>
+                                            <type>STRING</type>
+                                            <name>ds.0.color</name>
+                                            <value>1A7C11</value>
+                                        </field>
+                                        <field>
+                                            <type>STRING</type>
+                                            <name>ds.0.hosts.0</name>
+                                            <value>zabbig Linux Host</value>
+                                        </field>
+                                        <field>
+                                            <type>STRING</type>
+                                            <name>ds.0.items.0</name>
+                                            <value>Network RX errors</value>
+                                        </field>
+                                        <field>
+                                            <type>STRING</type>
+                                            <name>ds.1.color</name>
+                                            <value>2774A4</value>
+                                        </field>
+                                        <field>
+                                            <type>STRING</type>
+                                            <name>ds.1.hosts.0</name>
+                                            <value>zabbig Linux Host</value>
+                                        </field>
+                                        <field>
+                                            <type>STRING</type>
+                                            <name>ds.1.items.0</name>
+                                            <value>Network TX errors</value>
+                                        </field>
+                                        <field>
+                                            <type>STRING</type>
+                                            <name>ds.2.color</name>
+                                            <value>F63100</value>
+                                        </field>
+                                        <field>
+                                            <type>STRING</type>
+                                            <name>ds.2.hosts.0</name>
+                                            <value>zabbig Linux Host</value>
+                                        </field>
+                                        <field>
+                                            <type>STRING</type>
+                                            <name>ds.2.items.0</name>
+                                            <value>Network RX dropped</value>
+                                        </field>
+                                        <field>
+                                            <type>STRING</type>
+                                            <name>ds.3.color</name>
+                                            <value>A54F10</value>
+                                        </field>
+                                        <field>
+                                            <type>STRING</type>
+                                            <name>ds.3.hosts.0</name>
+                                            <value>zabbig Linux Host</value>
+                                        </field>
+                                        <field>
+                                            <type>STRING</type>
+                                            <name>ds.3.items.0</name>
+                                            <value>Network TX dropped</value>
+                                        </field>
+                                        <field>
+                                            <type>STRING</type>
+                                            <name>reference</name>
+                                            <value>W3XKK</value>
+                                        </field>
+                                        <field>
+                                            <type>INTEGER</type>
+                                            <name>righty</name>
+                                            <value>0</value>
+                                        </field>
+                                    </fields>
+                                </widget>
+                                <widget>
+                                    <type>item</type>
+                                    <name>UDP Sockets</name>
+                                    <x>12</x>
+                                    <y>5</y>
+                                    <width>6</width>
+                                    <height>4</height>
+                                    <fields>
+                                        <field>
+                                            <type>INTEGER</type>
+                                            <name>dynamic</name>
+                                            <value>0</value>
+                                        </field>
+                                        <field>
+                                            <type>ITEM</type>
+                                            <name>itemid</name>
+                                            <value>
+                                                <host>zabbig Linux Host</host>
+                                                <key>host.net.udp_inuse</key>
+                                            </value>
+                                        </field>
+                                        <field>
+                                            <type>INTEGER</type>
+                                            <name>show_description</name>
+                                            <value>1</value>
+                                        </field>
+                                    </fields>
+                                </widget>
+                            </widgets>
+                        </page>
+                        <page>
+                            <name>Client Health</name>
+                            <widgets>
+                                <widget>
+                                    <type>item</type>
+                                    <name>Last Run Success</name>
+                                    <width>6</width>
+                                    <height>3</height>
+                                    <fields>
+                                        <field>
+                                            <type>INTEGER</type>
+                                            <name>dynamic</name>
+                                            <value>0</value>
+                                        </field>
+                                        <field>
+                                            <type>ITEM</type>
+                                            <name>itemid</name>
+                                            <value>
+                                                <host>zabbig Linux Host</host>
+                                                <key>zabbig.client.run.success</key>
+                                            </value>
+                                        </field>
+                                        <field>
+                                            <type>INTEGER</type>
+                                            <name>show_description</name>
+                                            <value>1</value>
+                                        </field>
+                                    </fields>
+                                </widget>
+                                <widget>
+                                    <type>svggraph</type>
+                                    <name>Run Duration (ms)</name>
+                                    <y>3</y>
+                                    <width>12</width>
+                                    <height>4</height>
+                                    <fields>
+                                        <field>
+                                            <type>STRING</type>
+                                            <name>ds.0.color</name>
+                                            <value>1A7C11</value>
+                                        </field>
+                                        <field>
+                                            <type>STRING</type>
+                                            <name>ds.0.hosts.0</name>
+                                            <value>zabbig Linux Host</value>
+                                        </field>
+                                        <field>
+                                            <type>STRING</type>
+                                            <name>ds.0.items.0</name>
+                                            <value>zabbig client: run duration (ms)</value>
+                                        </field>
+                                        <field>
+                                            <type>STRING</type>
+                                            <name>reference</name>
+                                            <value>JW8CL</value>
+                                        </field>
+                                        <field>
+                                            <type>INTEGER</type>
+                                            <name>righty</name>
+                                            <value>0</value>
+                                        </field>
+                                    </fields>
+                                </widget>
+                                <widget>
+                                    <type>clock</type>
+                                    <name>Server Time</name>
+                                    <y>7</y>
+                                    <width>6</width>
+                                    <height>3</height>
+                                    <fields>
+                                        <field>
+                                            <type>INTEGER</type>
+                                            <name>clock_type</name>
+                                            <value>0</value>
+                                        </field>
+                                        <field>
+                                            <type>INTEGER</type>
+                                            <name>time_type</name>
+                                            <value>0</value>
+                                        </field>
+                                    </fields>
+                                </widget>
+                                <widget>
+                                    <type>item</type>
+                                    <name>Collectors Failed</name>
+                                    <x>6</x>
+                                    <width>6</width>
+                                    <height>3</height>
+                                    <fields>
+                                        <field>
+                                            <type>INTEGER</type>
+                                            <name>dynamic</name>
+                                            <value>0</value>
+                                        </field>
+                                        <field>
+                                            <type>ITEM</type>
+                                            <name>itemid</name>
+                                            <value>
+                                                <host>zabbig Linux Host</host>
+                                                <key>zabbig.client.collectors.failed</key>
+                                            </value>
+                                        </field>
+                                        <field>
+                                            <type>INTEGER</type>
+                                            <name>show_description</name>
+                                            <value>1</value>
+                                        </field>
+                                    </fields>
+                                </widget>
+                                <widget>
+                                    <type>item</type>
+                                    <name>Metrics Sent</name>
+                                    <x>12</x>
+                                    <width>6</width>
+                                    <height>3</height>
+                                    <fields>
+                                        <field>
+                                            <type>INTEGER</type>
+                                            <name>dynamic</name>
+                                            <value>0</value>
+                                        </field>
+                                        <field>
+                                            <type>ITEM</type>
+                                            <name>itemid</name>
+                                            <value>
+                                                <host>zabbig Linux Host</host>
+                                                <key>zabbig.client.metrics.sent</key>
+                                            </value>
+                                        </field>
+                                        <field>
+                                            <type>INTEGER</type>
+                                            <name>show_description</name>
+                                            <value>1</value>
+                                        </field>
+                                    </fields>
+                                </widget>
+                                <widget>
+                                    <type>svggraph</type>
+                                    <name>Collectors Total vs Failed</name>
+                                    <x>12</x>
+                                    <y>3</y>
+                                    <width>12</width>
+                                    <height>4</height>
+                                    <fields>
+                                        <field>
+                                            <type>STRING</type>
+                                            <name>ds.0.color</name>
+                                            <value>1A7C11</value>
+                                        </field>
+                                        <field>
+                                            <type>STRING</type>
+                                            <name>ds.0.hosts.0</name>
+                                            <value>zabbig Linux Host</value>
+                                        </field>
+                                        <field>
+                                            <type>STRING</type>
+                                            <name>ds.0.items.0</name>
+                                            <value>zabbig client: collectors total</value>
+                                        </field>
+                                        <field>
+                                            <type>STRING</type>
+                                            <name>ds.1.color</name>
+                                            <value>2774A4</value>
+                                        </field>
+                                        <field>
+                                            <type>STRING</type>
+                                            <name>ds.1.hosts.0</name>
+                                            <value>zabbig Linux Host</value>
+                                        </field>
+                                        <field>
+                                            <type>STRING</type>
+                                            <name>ds.1.items.0</name>
+                                            <value>zabbig client: collectors failed</value>
+                                        </field>
+                                        <field>
+                                            <type>STRING</type>
+                                            <name>reference</name>
+                                            <value>D8A9G</value>
+                                        </field>
+                                        <field>
+                                            <type>INTEGER</type>
+                                            <name>righty</name>
+                                            <value>0</value>
+                                        </field>
+                                    </fields>
+                                </widget>
+                            </widgets>
+                        </page>
+                        <page>
+                            <name>Probes</name>
+                            <widgets>
+                                <widget>
+                                    <type>problems</type>
+                                    <name>Probe Problems</name>
+                                    <width>24</width>
+                                    <height>4</height>
+                                    <fields>
+                                        <field>
+                                            <type>INTEGER</type>
+                                            <name>show_lines</name>
+                                            <value>25</value>
+                                        </field>
+                                        <field>
+                                            <type>INTEGER</type>
+                                            <name>sort_triggers</name>
+                                            <value>3</value>
+                                        </field>
+                                    </fields>
+                                </widget>
+                                <widget>
+                                    <type>item</type>
+                                    <name>Google DNS (8.8.8.8:53)</name>
+                                    <y>4</y>
+                                    <width>6</width>
+                                    <height>3</height>
+                                    <fields>
+                                        <field>
+                                            <type>INTEGER</type>
+                                            <name>dynamic</name>
+                                            <value>0</value>
+                                        </field>
+                                        <field>
+                                            <type>ITEM</type>
+                                            <name>itemid</name>
+                                            <value>
+                                                <host>zabbig Linux Host</host>
+                                                <key>probe.google.dns</key>
+                                            </value>
+                                        </field>
+                                        <field>
+                                            <type>INTEGER</type>
+                                            <name>show_description</name>
+                                            <value>1</value>
+                                        </field>
+                                    </fields>
+                                </widget>
+                                <widget>
+                                    <type>item</type>
+                                    <name>GitHub API SSL Cert</name>
+                                    <y>7</y>
+                                    <width>6</width>
+                                    <height>3</height>
+                                    <fields>
+                                        <field>
+                                            <type>INTEGER</type>
+                                            <name>dynamic</name>
+                                            <value>0</value>
+                                        </field>
+                                        <field>
+                                            <type>ITEM</type>
+                                            <name>itemid</name>
+                                            <value>
+                                                <host>zabbig Linux Host</host>
+                                                <key>probe.github.api.up.ssl_check</key>
+                                            </value>
+                                        </field>
+                                        <field>
+                                            <type>INTEGER</type>
+                                            <name>show_description</name>
+                                            <value>1</value>
+                                        </field>
+                                    </fields>
+                                </widget>
+                                <widget>
+                                    <type>svggraph</type>
+                                    <name>Probe Response Times (ms)</name>
+                                    <y>10</y>
+                                    <width>24</width>
+                                    <height>5</height>
+                                    <fields>
+                                        <field>
+                                            <type>STRING</type>
+                                            <name>ds.0.color</name>
+                                            <value>1A7C11</value>
+                                        </field>
+                                        <field>
+                                            <type>STRING</type>
+                                            <name>ds.0.hosts.0</name>
+                                            <value>zabbig Linux Host</value>
+                                        </field>
+                                        <field>
+                                            <type>STRING</type>
+                                            <name>ds.0.items.0</name>
+                                            <value>Probe: Google DNS response time (ms)</value>
+                                        </field>
+                                        <field>
+                                            <type>STRING</type>
+                                            <name>ds.1.color</name>
+                                            <value>2774A4</value>
+                                        </field>
+                                        <field>
+                                            <type>STRING</type>
+                                            <name>ds.1.hosts.0</name>
+                                            <value>zabbig Linux Host</value>
+                                        </field>
+                                        <field>
+                                            <type>STRING</type>
+                                            <name>ds.1.items.0</name>
+                                            <value>Probe: GitHub API response time (ms)</value>
+                                        </field>
+                                        <field>
+                                            <type>STRING</type>
+                                            <name>reference</name>
+                                            <value>Q6NE8</value>
+                                        </field>
+                                        <field>
+                                            <type>INTEGER</type>
+                                            <name>righty</name>
+                                            <value>0</value>
+                                        </field>
+                                    </fields>
+                                </widget>
+                                <widget>
+                                    <type>item</type>
+                                    <name>GitHub HTTPS Port</name>
+                                    <x>6</x>
+                                    <y>4</y>
+                                    <width>6</width>
+                                    <height>3</height>
+                                    <fields>
+                                        <field>
+                                            <type>INTEGER</type>
+                                            <name>dynamic</name>
+                                            <value>0</value>
+                                        </field>
+                                        <field>
+                                            <type>ITEM</type>
+                                            <name>itemid</name>
+                                            <value>
+                                                <host>zabbig Linux Host</host>
+                                                <key>probe.github.https.port</key>
+                                            </value>
+                                        </field>
+                                        <field>
+                                            <type>INTEGER</type>
+                                            <name>show_description</name>
+                                            <value>1</value>
+                                        </field>
+                                    </fields>
+                                </widget>
+                                <widget>
+                                    <type>item</type>
+                                    <name>GitHub API Body SSL Cert</name>
+                                    <x>6</x>
+                                    <y>7</y>
+                                    <width>6</width>
+                                    <height>3</height>
+                                    <fields>
+                                        <field>
+                                            <type>INTEGER</type>
+                                            <name>dynamic</name>
+                                            <value>0</value>
+                                        </field>
+                                        <field>
+                                            <type>ITEM</type>
+                                            <name>itemid</name>
+                                            <value>
+                                                <host>zabbig Linux Host</host>
+                                                <key>probe.github.api.body.ssl_check</key>
+                                            </value>
+                                        </field>
+                                        <field>
+                                            <type>INTEGER</type>
+                                            <name>show_description</name>
+                                            <value>1</value>
+                                        </field>
+                                    </fields>
+                                </widget>
+                                <widget>
+                                    <type>item</type>
+                                    <name>GitHub API Status</name>
+                                    <x>12</x>
+                                    <y>4</y>
+                                    <width>6</width>
+                                    <height>3</height>
+                                    <fields>
+                                        <field>
+                                            <type>INTEGER</type>
+                                            <name>dynamic</name>
+                                            <value>0</value>
+                                        </field>
+                                        <field>
+                                            <type>ITEM</type>
+                                            <name>itemid</name>
+                                            <value>
+                                                <host>zabbig Linux Host</host>
+                                                <key>probe.github.api.up</key>
+                                            </value>
+                                        </field>
+                                        <field>
+                                            <type>INTEGER</type>
+                                            <name>show_description</name>
+                                            <value>1</value>
+                                        </field>
+                                    </fields>
+                                </widget>
+                                <widget>
+                                    <type>item</type>
+                                    <name>GitHub API Body Check</name>
+                                    <x>18</x>
+                                    <y>4</y>
+                                    <width>6</width>
+                                    <height>3</height>
+                                    <fields>
+                                        <field>
+                                            <type>INTEGER</type>
+                                            <name>dynamic</name>
+                                            <value>0</value>
+                                        </field>
+                                        <field>
+                                            <type>ITEM</type>
+                                            <name>itemid</name>
+                                            <value>
+                                                <host>zabbig Linux Host</host>
+                                                <key>probe.github.api.body</key>
+                                            </value>
+                                        </field>
+                                        <field>
+                                            <type>INTEGER</type>
+                                            <name>show_description</name>
+                                            <value>1</value>
+                                        </field>
+                                    </fields>
+                                </widget>
+                            </widgets>
+                        </page>
+                    </pages>
+                </dashboard>
+            </dashboards>
+        </template>
+    </templates>
+</zabbix_export>
