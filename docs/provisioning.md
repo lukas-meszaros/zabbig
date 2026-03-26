@@ -136,6 +136,64 @@ These items are defined in `template.yaml` under `self_monitoring_items` and are
 
 ---
 
+## provision_all.py — One-shot Full Provisioning
+
+`provision_all.py` combines all steps (template group, template, items, triggers, template dashboard, and optionally a host dashboard) into a single idempotent run.
+
+```bash
+cd zabbix_update
+
+# Template + items + triggers + template dashboard only:
+python3 provision_all.py
+
+# Full provisioning including host dashboard:
+python3 provision_all.py --host prod-server-01
+```
+
+---
+
+## Template Distribution — zbx_export_template.yaml
+
+`zabbix_update/zbx_export_template.yaml` is a distributable Zabbix configuration export that can be imported into any Zabbix 7.0 instance. It is generated directly from the live Zabbix instance via the `configuration.export` API, so its format is guaranteed to be importable.
+
+### Importing via the Zabbix Web UI
+
+1. Go to **Configuration → Templates → Import** (top-right button).
+2. Choose `zbx_export_template.yaml`.
+3. In the import dialog, ensure these options are enabled:
+
+| Section | Create missing | Update existing |
+|---|---|---|
+| Template groups | ✓ | optional |
+| Templates | ✓ | optional |
+| Items | ✓ | optional |
+| Triggers | ✓ | optional |
+| Template dashboards | ✓ | optional |
+
+4. Click **Import**.
+
+> **Note:** "Template dashboards: Create missing" must be checked. If it is left unchecked the dashboard is silently skipped on a fresh install.
+
+### Importing via the API
+
+```bash
+cd zabbix_update
+python3 _export_template.py --test
+```
+
+The `--test` flag exports the current template from Zabbix, writes it to `zbx_export_template.yaml`, then immediately reimports it to verify the file is valid. Without `--test` it only exports.
+
+### Refreshing the export after provisioning changes
+
+After running `provision_all.py` (which may add new items, triggers, or dashboard widgets), regenerate the distributable file:
+
+```bash
+cd zabbix_update
+ZABBIX_ADMIN_USER=Admin ZABBIX_ADMIN_PASSWORD=<pass> python3 _export_template.py --test
+```
+
+---
+
 ## Dependencies
 
 All dependencies are vendored in `zabbig_client/src/` — no `pip install` is needed:
