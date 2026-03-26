@@ -52,6 +52,7 @@ class CpuCollector(BaseCollector):
             tags=metric.tags,
             source=f"{proc_root}/stat (mode={mode})",
             duration_ms=(time.monotonic() - t0) * 1000,
+            host_name=metric.host_name,
         )
 
 

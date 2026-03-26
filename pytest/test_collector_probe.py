@@ -16,7 +16,7 @@ from zabbig_client.collectors.probe import (
     _eval_http_status,
     _eval_http_body,
 )
-from zabbig_client.models import RESULT_OK
+from zabbig_client.models import RESULT_OK, RESULT_FAILED
 
 
 # ---------------------------------------------------------------------------
@@ -49,6 +49,42 @@ class TestRunTcpProbe:
         assert len(results) == 1
         assert results[0].value == "1"
         assert results[0].status == RESULT_OK
+
+    def test_metric_host_name_on_result(self):
+        with patch("socket.create_connection") as mock_conn:
+            mock_conn.return_value.__enter__ = lambda s: s
+            mock_conn.return_value.__exit__ = MagicMock(return_value=False)
+            metric = _tcp_metric()
+            metric = make_metric(
+                collector="probe",
+                key="host.probe.tcp",
+                params={"mode": "tcp", "host": "127.0.0.1", "port": "9999"},
+                host_name="tcp-override",
+            )
+            results = _run_tcp_probe(metric)
+        assert results[0].host_name == "tcp-override"
+
+    def test_metric_host_name_none_by_default(self):
+        with patch("socket.create_connection") as mock_conn:
+            mock_conn.return_value.__enter__ = lambda s: s
+            mock_conn.return_value.__exit__ = MagicMock(return_value=False)
+            metric = _tcp_metric()
+            results = _run_tcp_probe(metric)
+        assert results[0].host_name is None
+
+    def test_rt_sub_key_uses_metric_host_name(self):
+        with patch("socket.create_connection") as mock_conn:
+            mock_conn.return_value.__enter__ = lambda s: s
+            mock_conn.return_value.__exit__ = MagicMock(return_value=False)
+            metric = make_metric(
+                collector="probe",
+                key="host.probe.tcp",
+                params={"mode": "tcp", "host": "127.0.0.1", "port": "9999", "response_time_ms": True},
+                host_name="tcp-override",
+            )
+            results = _run_tcp_probe(metric)
+        rt_result = next(r for r in results if "response_time_ms" in r.key)
+        assert rt_result.host_name == "tcp-override"
 
     def test_refused_returns_0(self):
         with patch("socket.create_connection", side_effect=ConnectionRefusedError):
@@ -107,6 +143,86 @@ class TestRunTcpProbe:
             metric = _tcp_metric()
             results = _run_tcp_probe(metric)
         assert results[0].collector == "probe"
+
+
+# ---------------------------------------------------------------------------
+# _eval_http_status
+# ---------------------------------------------------------------------------
+
+class TestEvalHttpStatus:
+    def test_no_conditions_returns_default(self):
+        # With no conditions, nothing matches, so default_value is returned
+        value, host_name = _eval_http_status("200", [], "0")
+        assert value == "0"
+        assert host_name is None
+
+    def test_no_conditions_catchall_returns_value(self):
+        # A catch-all condition (no 'when') matches any input
+        conds = [{"value": "200_raw"}]
+        value, host_name = _eval_http_status("200", conds, "0")
+        assert value == "200_raw"
+
+    def test_matching_condition_returns_value(self):
+        conds = [{"when": "200", "value": 1}]
+        value, host_name = _eval_http_status("200", conds, "0")
+        assert value == 1
+        assert host_name is None
+
+    def test_no_match_returns_default(self):
+        conds = [{"when": "200", "value": 1}]
+        value, host_name = _eval_http_status("404", conds, "0")
+        assert value == "0"
+        assert host_name is None
+
+    def test_catchall_condition_matches(self):
+        conds = [{"when": "200", "value": 1}, {"value": 0}]
+        value, host_name = _eval_http_status("503", conds, "-1")
+        assert value == 0
+
+    def test_condition_host_name_returned(self):
+        conds = [{"when": "200", "value": 1, "host_name": "web-ok"}, {"value": 0}]
+        value, host_name = _eval_http_status("200", conds, "0")
+        assert value == 1
+        assert host_name == "web-ok"
+
+    def test_no_condition_host_name_returns_none(self):
+        conds = [{"when": "200", "value": 1}]
+        value, host_name = _eval_http_status("200", conds, "0")
+        assert host_name is None
+
+    def test_no_match_host_name_is_none(self):
+        conds = [{"when": "200", "value": 1, "host_name": "web-ok"}]
+        value, host_name = _eval_http_status("404", conds, "0")
+        assert host_name is None
+
+
+# ---------------------------------------------------------------------------
+# _eval_http_body
+# ---------------------------------------------------------------------------
+
+class TestEvalHttpBody:
+    def test_matching_condition(self):
+        conds = [{"when": "ok", "value": 1}, {"value": 0}]
+        value, host_name = _eval_http_body("status: ok", r"status: (\w+)", conds, "last", "0")
+        assert value == 1
+        assert host_name is None
+
+    def test_no_match_returns_default(self):
+        conds = [{"when": "ok", "value": 1}]
+        value, host_name = _eval_http_body("no match here", r"status: (\w+)", conds, "last", "0")
+        assert value == "0"
+        assert host_name is None
+
+    def test_condition_host_name_returned(self):
+        conds = [{"when": "ok", "value": 1, "host_name": "body-host"}, {"value": 0}]
+        value, host_name = _eval_http_body("status: ok", r"status: (\w+)", conds, "last", "0")
+        assert value == 1
+        assert host_name == "body-host"
+
+    def test_no_condition_host_name_none(self):
+        conds = [{"when": "ok", "value": 1}]
+        value, host_name = _eval_http_body("status: ok", r"status: (\w+)", conds, "last", "0")
+        assert host_name is None
 
 
 # ---------------------------------------------------------------------------
@@ -206,6 +322,59 @@ class TestRunHttpProbe:
         ssl_result = next(r for r in results if "ssl_check" in r.key)
         assert ssl_result.value == "0"
 
+    def test_condition_host_name_on_primary_result(self):
+        resp = _make_fake_response(200)
+        with patch("requests.request", return_value=resp):
+            metric = _http_metric(
+                mode="http_status",
+                conditions=[{"when": "200", "value": 1, "host_name": "web-ok"}, {"value": 0}],
+            )
+            results = _run_http_probe(metric)
+        assert results[0].host_name == "web-ok"
+
+    def test_metric_host_name_used_when_no_condition_override(self):
+        resp = _make_fake_response(200)
+        with patch("requests.request", return_value=resp):
+            metric = make_metric(
+                collector="probe",
+                key="host.probe.http",
+                params={"mode": "http_status", "url": "http://example.com/"},
+                host_name="metric-override",
+            )
+            results = _run_http_probe(metric)
+        assert results[0].host_name == "metric-override"
+
+    def test_sub_key_uses_metric_host_name_not_condition(self):
+        resp = _make_fake_response(200)
+        with patch("requests.request", return_value=resp):
+            metric = make_metric(
+                collector="probe",
+                key="host.probe.http",
+                params={
+                    "mode": "http_status",
+                    "url": "http://example.com/",
+                    "response_time_ms": True,
+                    "conditions": [{"when": "200", "value": 1, "host_name": "web-cond"}, {"value": 0}],
+                },
+                host_name="metric-override",
+            )
+            results = _run_http_probe(metric)
+        rt_result = next(r for r in results if "response_time_ms" in r.key)
+        # sub-keys use metric host_name, not condition host_name
+        assert rt_result.host_name == "metric-override"
+
+    def test_http_body_condition_host_name_on_result(self):
+        resp = _make_fake_response(200, body=b"status: ok\n")
+        with patch("requests.request", return_value=resp):
+            metric = _http_metric(
+                mode="http_body",
+                match=r"status: (\w+)",
+                conditions=[{"when": "ok", "value": 1, "host_name": "body-host"}, {"value": 0}],
+                default_value=0,
+            )
+            results = _run_http_probe(metric)
+        assert results[0].host_name == "body-host"
+
 
 # ---------------------------------------------------------------------------
 # SSL cert check
@@ -276,3 +445,32 @@ class TestProbeCollector:
         assert len(results) == 2
         keys = [r.key for r in results]
         assert any("response_time_ms" in k for k in keys)
+
+    async def test_condition_host_name_propagated_to_result(self):
+        resp = _make_fake_response(200)
+        with patch("requests.request", return_value=resp):
+            metric = _http_metric(
+                mode="http_status",
+                conditions=[{"when": "200", "value": 1, "host_name": "cond-host"}, {"value": 0}],
+            )
+            results = await ProbeCollector().collect(metric)
+        assert results[0].host_name == "cond-host"
+
+    async def test_metric_host_name_propagated_to_result(self):
+        resp = _make_fake_response(200)
+        with patch("requests.request", return_value=resp):
+            metric = make_metric(
+                collector="probe",
+                key="host.probe.http",
+                params={"mode": "http_status", "url": "http://example.com/"},
+                host_name="async-override",
+            )
+            results = await ProbeCollector().collect(metric)
+        assert results[0].host_name == "async-override"
+
+    async def test_no_host_name_override_result_is_none(self):
+        resp = _make_fake_response(200)
+        with patch("requests.request", return_value=resp):
+            metric = _http_metric(mode="http_status")
+            results = await ProbeCollector().collect(metric)
+        assert results[0].host_name is None

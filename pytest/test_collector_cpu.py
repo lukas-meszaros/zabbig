@@ -136,6 +136,25 @@ class TestCpuCollector:
         assert result.duration_ms >= 0
         assert result.timestamp > 0
 
+    async def test_metric_host_name_on_result(self, tmp_path):
+        write_proc_files(tmp_path, uptime="100.0 10.0\n")
+        metric = make_metric(
+            collector="cpu", key="host.cpu.uptime",
+            params={"mode": "uptime", "proc_root": str(tmp_path)},
+            host_name="cpu-override",
+        )
+        result = await CpuCollector().collect(metric)
+        assert result.host_name == "cpu-override"
+
+    async def test_no_host_name_override_is_none(self, tmp_path):
+        write_proc_files(tmp_path, uptime="100.0 10.0\n")
+        metric = make_metric(
+            collector="cpu", key="host.cpu.uptime",
+            params={"mode": "uptime", "proc_root": str(tmp_path)},
+        )
+        result = await CpuCollector().collect(metric)
+        assert result.host_name is None
+
     async def test_default_mode_is_percent(self, tmp_path):
         write_proc_files(tmp_path, stat="cpu  100 0 50 9000 0 0 0 0 0 0\n")
         metric = make_metric(

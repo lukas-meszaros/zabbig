@@ -92,6 +92,35 @@ No `when` or `extract` — matches any line that passed `match` but was not matc
 
 ---
 
+## Per-condition `host_name`
+
+Any condition entry can include an optional `host_name` field. When a line matches that condition, the resulting metric value is sent to Zabbix under the override host name instead of the metric-level or global host.
+
+```yaml
+- id: app_log_severity
+  collector: log
+  key: app.log.severity
+  host_name: "app-server"           # metric-level fallback
+  params:
+    path: /var/log/myapp/app.log
+    match: "CRITICAL|ERROR|WARN"
+    conditions:
+      - when: "CRITICAL"
+        value: 3
+        host_name: "app-server-critical"   # this condition routes to a different host
+      - when: "ERROR"
+        value: 2
+        host_name: "app-server-errors"
+      - when: "WARN"
+        value: 1
+        # no host_name — uses metric-level "app-server"
+      - value: 0
+```
+
+**Priority chain:** condition `host_name` → metric `host_name` → `zabbix.host_name` in `client.yaml`
+
+---
+
 ## Scenarios
 
 ### Simplest: return 1 when any ERROR appears, 0 when clean

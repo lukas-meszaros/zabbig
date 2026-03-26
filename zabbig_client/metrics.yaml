@@ -90,6 +90,14 @@
 #                              fails or times out. Must be a string (quote
 #                              numeric values). Example: "0"
 #
+#   host_name        string    OPTIONAL. Override the Zabbix host name for
+#                              this specific metric. When set, the metric is
+#                              sent to Zabbix under this host name instead of
+#                              the global zabbix.host_name from client.yaml.
+#                              Useful for routing metrics to different Zabbix
+#                              host objects from a single client instance.
+#                              Example: host_name: "remote-server-01"
+#
 #   params           map       REQUIRED. Collector-specific parameters.
 #                              See per-collector sections below.
 #
@@ -375,14 +383,16 @@
 #                          Each entry supports one of three forms:
 #
 #                          Form 1 — regex match:
-#                            when:  <Python regex>
-#                            value: <literal value to return>
+#                            when:      <Python regex>
+#                            value:     <literal value to return>
+#                            host_name: <optional Zabbix host override>
 #
 #                          Form 2 — numeric extract + comparison:
 #                            extract:   <Python regex with ONE capture group>
 #                            compare:   gt | lt | gte | lte | eq
 #                            threshold: <number>
 #                            value:     <literal value>  OR  "$1"
+#                            host_name: <optional Zabbix host override>
 #                          `extract` runs re.search on the line. The text
 #                          inside the capture group () is cast to float and
 #                          compared against `threshold`. Use value: "$1" to
@@ -390,9 +400,19 @@
 #                          value instead of a fixed constant.
 #
 #                          Form 3 — catch-all (place last):
-#                            value: <literal value>
+#                            value:     <literal value>
+#                            host_name: <optional Zabbix host override>
 #                          No `when` or `extract` — matches any line that
 #                          passed `match` but no earlier condition.
+#
+#                          Per-condition host_name:
+#                          When a condition entry includes host_name, the
+#                          metric value produced by that condition is sent
+#                          to Zabbix under that host name, overriding both
+#                          the metric-level host_name and the global
+#                          zabbix.host_name from client.yaml.
+#                          Priority: condition host_name > metric host_name
+#                                    > client.yaml zabbix.host_name
 #
 #                          NOTE: `when` and `extract` are mutually exclusive.
 #
@@ -454,6 +474,7 @@ metrics:
     enabled: true
     collector: cpu
     key: host.cpu.util
+    host_name: "prod-server-02"
     value_type: float
     unit: "%"
     delivery: batch
@@ -646,3 +667,22 @@ metrics:
     params:
       mount: "/"
       mode: inodes_total
+
+  - id: log_app_error
+    enabled: true
+    collector: log
+    key: app.log.error
+    host_name: "prod-server-01"
+    value_type: int
+    unit: ""
+    delivery: immediate
+    timeout_seconds: 30
+    error_policy: skip
+    params:
+      path: "/var/log/myapp/app.log"
+      match: "USER_PROCESS"
+      mode: condition
+      default_value: 0
+      conditions:
+        - value: 1
+          host_name: "prod-server-02"

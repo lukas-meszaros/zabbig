@@ -219,6 +219,25 @@ class TestNetworkCollector:
         result = await NetworkCollector().collect(metric)
         assert result.collector == "network"
 
+    async def test_metric_host_name_on_result(self, tmp_path):
+        proc_root = _write_net_dev(tmp_path)
+        metric = make_metric(
+            collector="network", key="host.net.rx_bytes",
+            params={"interface": "eth0", "mode": "rx_bytes", "proc_root": proc_root},
+            host_name="net-override",
+        )
+        result = await NetworkCollector().collect(metric)
+        assert result.host_name == "net-override"
+
+    async def test_no_host_name_override_is_none(self, tmp_path):
+        proc_root = _write_net_dev(tmp_path)
+        metric = make_metric(
+            collector="network", key="host.net.rx_bytes",
+            params={"interface": "eth0", "mode": "rx_bytes", "proc_root": proc_root},
+        )
+        result = await NetworkCollector().collect(metric)
+        assert result.host_name is None
+
     async def test_total_interface(self, tmp_path):
         proc_root = _write_net_dev(tmp_path)
         metric = make_metric(

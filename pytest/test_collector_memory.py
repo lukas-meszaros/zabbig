@@ -137,3 +137,22 @@ class TestMemoryCollector:
         )
         result = await MemoryCollector().collect(metric)
         assert float(result.value) == 0.0
+
+    async def test_metric_host_name_on_result(self, tmp_path):
+        write_meminfo(tmp_path)
+        metric = make_metric(
+            collector="memory", key="host.mem",
+            params={"mode": "used_percent", "proc_root": str(tmp_path)},
+            host_name="mem-override",
+        )
+        result = await MemoryCollector().collect(metric)
+        assert result.host_name == "mem-override"
+
+    async def test_no_host_name_override_is_none(self, tmp_path):
+        write_meminfo(tmp_path)
+        metric = make_metric(
+            collector="memory", key="host.mem",
+            params={"mode": "used_percent", "proc_root": str(tmp_path)},
+        )
+        result = await MemoryCollector().collect(metric)
+        assert result.host_name is None

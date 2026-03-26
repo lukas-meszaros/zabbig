@@ -117,6 +117,7 @@ class MetricDef:
     fallback_value: Optional[str] = None
     tags: list = field(default_factory=list)
     params: dict = field(default_factory=dict)
+    host_name: Optional[str] = None
 
 
 @dataclass
@@ -152,6 +153,7 @@ class MetricResult:
     error: Optional[str] = None
     source: str = ""
     duration_ms: float = 0.0
+    host_name: Optional[str] = None
 
     @property
     def is_sendable(self) -> bool:
@@ -173,6 +175,7 @@ class MetricResult:
             tags=metric.tags,
             error="Collector timed out",
             duration_ms=duration_ms,
+            host_name=metric.host_name,
         )
 
     @classmethod
@@ -190,6 +193,7 @@ class MetricResult:
             tags=metric.tags,
             error=str(exc),
             duration_ms=duration_ms,
+            host_name=metric.host_name,
         )
 
     @classmethod
@@ -198,6 +202,7 @@ class MetricResult:
             metric_id=metric.id,
             key=metric.key,
             value=metric.fallback_value,
+            host_name=metric.host_name,
             value_type=metric.value_type,
             timestamp=int(time.time()),
             collector=metric.collector,

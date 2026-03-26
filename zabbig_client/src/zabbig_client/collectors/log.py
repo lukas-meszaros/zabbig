@@ -51,9 +51,10 @@ class LogCollector(BaseCollector):
         mode = metric.params.get("mode", "condition")
 
         if mode == "condition":
-            value = await asyncio.to_thread(_log_condition, metric)
+            value, cond_host_name = await asyncio.to_thread(_log_condition, metric)
         elif mode == "count":
             value = await asyncio.to_thread(_log_count, metric)
+            cond_host_name = None
         else:
             raise ValueError(f"Unknown log collector mode: '{mode}'")
 
@@ -70,6 +71,7 @@ class LogCollector(BaseCollector):
             tags=metric.tags,
             source=f"log mode={mode} path={metric.params.get('path', '')}",
             duration_ms=(time.monotonic() - t0) * 1000,
+            host_name=cond_host_name or metric.host_name,
         )
 
 
@@ -192,7 +194,7 @@ def _log_condition(metric: MetricDef) -> Any:
         start_offset = 0
 
     match_re = re.compile(match_pattern) if match_pattern else None
-    values: list[Any] = []
+    entries: list[tuple[Any, str | None]] = []
     new_offset = start_offset
 
     with open(resolved_path, "rb") as fh:
@@ -219,20 +221,20 @@ def _log_condition(metric: MetricDef) -> Any:
 
             # Line passed the top-level `match` filter — evaluate conditions
             if conditions:
-                val = _eval_conditions(conditions, line)
+                val, cond_host = _eval_conditions(conditions, line)
                 if val is not None:
-                    values.append(val)
+                    entries.append((val, cond_host))
             else:
                 # No conditions defined — each match contributes 1
-                values.append(1)
+                entries.append((1, None))
 
     state["inode"] = current_inode
     state["offset"] = new_offset
     _save_state(sf, state)
 
-    if not values:
-        return default_value
-    return _resolve_result(values, result_strategy)
+    if not entries:
+        return default_value, None
+    return _resolve_result_with_host(entries, result_strategy)
 
 
 def _log_count(metric: MetricDef) -> int:
@@ -264,53 +266,57 @@ def _log_count(metric: MetricDef) -> int:
 # Condition evaluation helpers
 # ---------------------------------------------------------------------------
 
-def _eval_conditions(conditions: list[dict], line: str) -> Any:
+def _eval_conditions(conditions: list[dict], line: str) -> tuple[Any, str | None]:
     """
-    Walk the ordered condition list. Return the value of the first match.
-    Returns None if no condition matches (should not happen with a catch-all).
+    Walk the ordered condition list. Return (value, host_name) of the first match.
+    Returns (None, None) if no condition matches.
     """
     for cond in conditions:
-        matched, value = _eval_one_condition(cond, line)
+        matched, value, host_name = _eval_one_condition(cond, line)
         if matched:
-            return value
-    return None
+            return value, host_name
+    return None, None
 
 
-def _eval_one_condition(cond: dict, line: str) -> tuple[bool, Any]:
+def _eval_one_condition(cond: dict, line: str) -> tuple[bool, Any, str | None]:
     """
     Evaluate a single condition entry against `line`.
 
     Entry types:
-      { when: <regex>, value: X }
-        — Pure regex match. Returns X when the regex matches the line.
+      { when: <regex>, value: X [, host_name: H] }
+        — Pure regex match. Returns X (and optional host override H) when the
+          regex matches the line.
 
       { extract: <regex with one capture group>,
         compare: gt|lt|gte|lte|eq,
         threshold: <number>,
-        value: X | "$1" }
+        value: X | "$1" [, host_name: H] }
         — Extracts a number via capture group, compares against threshold.
           value="$1" returns the extracted number itself as the metric value.
 
-      { value: X }
+      { value: X [, host_name: H] }
         — Catch-all. Always matches; place last in the list.
 
-    Returns (matched: bool, value: Any).
+    Returns (matched: bool, value: Any, host_name: str | None).
+    The host_name is taken from cond.get("host_name") and overrides the metric-
+    level host_name when the condition matches. None means no override.
     """
     value_raw = cond.get("value")
+    cond_host_name: str | None = cond.get("host_name") or None
 
     if "when" in cond:
         if re.search(cond["when"], line):
-            return True, value_raw
-        return False, None
+            return True, value_raw, cond_host_name
+        return False, None, None
 
     if "extract" in cond:
         m = re.search(cond["extract"], line)
         if not m:
-            return False, None
+            return False, None, None
         try:
             captured = float(m.group(1))
         except (IndexError, ValueError):
-            return False, None
+            return False, None, None
 
         compare = cond.get("compare", "gt")
         threshold = float(cond.get("threshold", 0))
@@ -326,15 +332,15 @@ def _eval_one_condition(cond: dict, line: str) -> tuple[bool, Any]:
         if op is None:
             raise ValueError(f"Unknown compare operator: '{compare}'")
         if not op(captured, threshold):
-            return False, None
+            return False, None, None
 
         # value="$1" → return the captured number as the metric value
         if value_raw == "$1":
-            return True, captured
-        return True, value_raw
+            return True, captured, cond_host_name
+        return True, value_raw, cond_host_name
 
     # Catch-all: no `when`, no `extract` — always matches
-    return True, value_raw
+    return True, value_raw, cond_host_name
 
 
 def _resolve_result(values: list[Any], strategy: str) -> Any:
@@ -369,3 +375,43 @@ def _resolve_result(values: list[Any], strategy: str) -> Any:
         return min(numeric)
 
     raise ValueError(f"Unknown result strategy: '{strategy}'")
+
+
+def _resolve_result_with_host(
+    entries: list[tuple[Any, str | None]], strategy: str
+) -> tuple[Any, str | None]:
+    """
+    Like _resolve_result but preserves the host_name from the winning entry.
+
+    Each entry is a (value, host_name) pair. The result strategy selects the
+    winning entry; its host_name is returned alongside the value.
+
+      last  — entry from the last  matching line
+      first — entry from the first matching line
+      max   — entry with numerically highest value; falls back to last
+      min   — entry with numerically lowest  value; falls back to last
+    """
+    if not entries:
+        return None, None
+    if strategy == "first":
+        return entries[0]
+    if strategy == "last":
+        return entries[-1]
+
+    numeric: list[tuple[float, str | None]] = []
+    for v, h in entries:
+        try:
+            numeric.append((float(v), h))
+        except (TypeError, ValueError):
+            pass
+
+    if not numeric:
+        return entries[-1]  # non-numeric values: fall back to last
+
+    if strategy == "max":
+        return max(numeric, key=lambda x: x[0])
+    if strategy == "min":
+        return min(numeric, key=lambda x: x[0])
+
+    raise ValueError(f"Unknown result strategy: '{strategy}'")
+

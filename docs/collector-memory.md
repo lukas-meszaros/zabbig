@@ -108,3 +108,20 @@ Setting `error_policy: fallback` with `fallback_value: "0"` ensures this metric 
   params:
     mode: swap_used_percent
 ```
+
+---
+
+## Host Name Override
+
+All metrics support the optional top-level `host_name` field. When set, the metric is sent to Zabbix under that host name instead of the global `zabbix.host_name` from `client.yaml`. Useful when a single client instance reports memory metrics for multiple Zabbix host objects.
+
+```yaml
+- id: mem_used_percent
+  collector: memory
+  key: host.memory.used_percent
+  host_name: "remote-server-01"    # override for this metric only
+  params:
+    mode: used_percent
+```
+
+See [configuration.md](configuration.md#metric-level-host_name) for the full priority chain.

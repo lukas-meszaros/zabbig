@@ -195,3 +195,21 @@ Orphaned TCP sockets should remain near zero. A growing count indicates a file d
   params:
     mode: tcp_inuse
 ```
+
+---
+
+## Host Name Override
+
+All metrics support the optional top-level `host_name` field. When set, the metric is sent to Zabbix under that host name instead of the global `zabbix.host_name` from `client.yaml`. Useful when a single client instance reports network metrics for multiple Zabbix host objects.
+
+```yaml
+- id: net_rx_bytes
+  collector: network
+  key: host.net.rx_bytes
+  host_name: "remote-server-01"    # override for this metric only
+  params:
+    interface: eth0
+    mode: rx_bytes
+```
+
+See [configuration.md](configuration.md#metric-level-host_name) for the full priority chain.

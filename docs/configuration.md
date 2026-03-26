@@ -54,6 +54,8 @@ zabbix:
   host_name: ""               # auto-detect from system hostname
 ```
 
+This is the **global default** used for all metrics. Individual metrics can override it — see [Metric-level `host_name`](#metric-level-host_name) below.
+
 #### `host_group`
 
 Used only by `zabbix_update/create_trapper_items.py`. The group is created automatically if it does not exist. Has no effect during metric collection.
@@ -369,6 +371,50 @@ What to do when a collector fails or times out:
 | `skip` | Silently discard. Nothing sent to Zabbix. |
 | `fallback` | Send `fallback_value` to Zabbix. Requires `fallback_value` to be set. |
 | `mark_failed` | Log an error, count as failed in run summary. Nothing sent. |
+
+---
+
+### Metric-level `host_name`
+
+Optional. Override the Zabbix host name for a specific metric.
+
+When set, the metric is sent to Zabbix under this host name instead of the global `zabbix.host_name` from `client.yaml`. Useful for routing metrics to different Zabbix host objects from a single client instance.
+
+```yaml
+- id: cpu_util
+  collector: cpu
+  key: host.cpu.util
+  host_name: "remote-server-01"     # overrides client.yaml for this metric only
+  params:
+    mode: percent
+```
+
+**Priority chain:** `host_name` on the metric entry overrides `zabbix.host_name` in `client.yaml`.
+
+For collectors that use the `conditions` engine (`log` in `condition` mode, `probe` in `http_status` and `http_body` modes), a per-condition `host_name` can further override at the individual condition level:
+
+```yaml
+- id: app_log_severity
+  collector: log
+  key: app.log.severity
+  host_name: "app-server"           # metric-level fallback
+  params:
+    path: /var/log/myapp/app.log
+    match: "CRITICAL|ERROR|WARN"
+    conditions:
+      - when: "CRITICAL"
+        value: 3
+        host_name: "app-server-critical"   # sent under this host when CRITICAL matched
+      - when: "ERROR"
+        value: 2
+        host_name: "app-server-errors"     # sent under this host when ERROR matched
+      - when: "WARN"
+        value: 1
+        # no host_name — falls back to metric-level "app-server"
+      - value: 0
+```
+
+**Full priority chain:** condition `host_name` → metric `host_name` → `zabbix.host_name` in `client.yaml`
 
 ---
 

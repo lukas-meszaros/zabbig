@@ -109,3 +109,20 @@ When the container has the host's `/proc` bind-mounted:
 ```
 
 Or set `runtime.proc_root: "/host/proc"` in `client.yaml` to apply to all collectors.
+
+---
+
+## Host Name Override
+
+All metrics support the optional top-level `host_name` field. When set, the metric is sent to Zabbix under that host name instead of the global `zabbix.host_name` from `client.yaml`. Useful when a single client instance reports CPU metrics for multiple Zabbix host objects.
+
+```yaml
+- id: cpu_util
+  collector: cpu
+  key: host.cpu.util
+  host_name: "remote-server-01"    # override for this metric only
+  params:
+    mode: percent
+```
+
+See [configuration.md](configuration.md#metric-level-host_name) for the full priority chain.

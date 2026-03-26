@@ -45,6 +45,7 @@ def make_metric(
     params=None,
     fallback_value=None,
     enabled=True,
+    host_name=None,
 ):
     return MetricDef(
         id=id,
@@ -58,6 +59,7 @@ def make_metric(
         value_type=value_type,
         params=params or {},
         fallback_value=fallback_value,
+        host_name=host_name,
     )
 
 
@@ -70,6 +72,7 @@ def make_result(
     value_type="float",
     collector="cpu",
     error=None,
+    host_name=None,
 ):
     return MetricResult(
         metric_id=metric_id,
@@ -81,6 +84,7 @@ def make_result(
         delivery=delivery,
         status=status,
         error=error,
+        host_name=host_name,
     )
 
 

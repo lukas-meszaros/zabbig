@@ -135,3 +135,21 @@ Percentage alone can be misleading on very large disks. Tracking absolute free b
     mount: "/"
     mode: inodes_total
 ```
+
+---
+
+## Host Name Override
+
+All metrics support the optional top-level `host_name` field. When set, the metric is sent to Zabbix under that host name instead of the global `zabbix.host_name` from `client.yaml`. Useful when a single client instance reports disk metrics for multiple Zabbix host objects.
+
+```yaml
+- id: disk_root_used_percent
+  collector: disk
+  key: host.disk.root.used_percent
+  host_name: "remote-server-01"    # override for this metric only
+  params:
+    mount: "/"
+    mode: used_percent
+```
+
+See [configuration.md](configuration.md#metric-level-host_name) for the full priority chain.

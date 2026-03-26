@@ -178,6 +178,35 @@ No `when` or `extract` — matches any line / status that was not caught earlier
 
 ---
 
+## Per-condition `host_name`
+
+Any condition entry in `http_status` or `http_body` mode can include an optional `host_name` field. When a line or status code matches that condition, the resulting metric is sent to Zabbix under the override host name instead of the metric-level or global host.
+
+```yaml
+- id: api_health
+  collector: probe
+  key: api.health
+  host_name: "api-cluster"          # metric-level fallback
+  params:
+    mode: http_status
+    url: "http://api-lb:8080/health"
+    conditions:
+      - when: "^200$"
+        value: 1
+        host_name: "api-cluster-primary"   # 200 → route to primary host
+      - when: "^503$"
+        value: 0
+        host_name: "api-cluster-standby"   # 503 → route to standby host
+      - value: 0
+        # no host_name — falls back to metric-level "api-cluster"
+```
+
+**Priority chain:** condition `host_name` → metric `host_name` → `zabbix.host_name` in `client.yaml`
+
+> Sub-key items (`response_time_ms`, `ssl_check`) always use the metric-level `host_name` and are not affected by per-condition overrides.
+
+---
+
 ## `result` Strategies (http\_body mode)
 
 | Strategy | Behaviour |

@@ -56,7 +56,7 @@ from urllib3.exceptions import InsecureRequestWarning  # vendored in src/
 from ..collector_registry import register_collector
 from ..models import MetricDef, MetricResult, RESULT_OK
 from .base import BaseCollector
-from .log import _eval_conditions, _resolve_result
+from .log import _eval_conditions, _resolve_result, _resolve_result_with_host
 
 import asyncio
 
@@ -123,6 +123,7 @@ def _run_tcp_probe(metric: MetricDef) -> list[MetricResult]:
         tags=metric.tags,
         source=source,
         duration_ms=elapsed_ms,
+        host_name=metric.host_name,
     )]
 
     if want_rt:
@@ -139,6 +140,7 @@ def _run_tcp_probe(metric: MetricDef) -> list[MetricResult]:
             tags=metric.tags,
             source=source,
             duration_ms=elapsed_ms,
+            host_name=metric.host_name,
         ))
 
     return results
@@ -207,15 +209,16 @@ def _run_http_probe(metric: MetricDef) -> list[MetricResult]:
     elapsed_ms = (time.monotonic() - t0) * 1000
 
     # --- Compute primary value ---
+    primary_host_name: str | None = None
     if not connect_ok:
         primary_value = default_value
     elif mode == "http_status":
         if conditions:
-            primary_value = _eval_http_status(str(status_code), conditions, default_value)
+            primary_value, primary_host_name = _eval_http_status(str(status_code), conditions, default_value)
         else:
             primary_value = status_code
     else:  # http_body
-        primary_value = _eval_http_body(
+        primary_value, primary_host_name = _eval_http_body(
             body, match_pattern, conditions, result_strategy, default_value
         )
 
@@ -232,6 +235,7 @@ def _run_http_probe(metric: MetricDef) -> list[MetricResult]:
         tags=metric.tags,
         source=source,
         duration_ms=elapsed_ms,
+        host_name=primary_host_name or metric.host_name,
     )]
 
     if want_rt:
@@ -249,6 +253,7 @@ def _run_http_probe(metric: MetricDef) -> list[MetricResult]:
             tags=metric.tags,
             source=source,
             duration_ms=elapsed_ms,
+            host_name=metric.host_name,
         ))
 
     if want_ssl:
@@ -264,6 +269,7 @@ def _run_http_probe(metric: MetricDef) -> list[MetricResult]:
             tags=metric.tags,
             source=source,
             duration_ms=elapsed_ms,
+            host_name=metric.host_name,
         ))
 
     return results
@@ -302,13 +308,16 @@ def _eval_http_status(
     status_str: str,
     conditions: list[dict],
     default_value: Any,
-) -> Any:
+) -> tuple[Any, str | None]:
     """
     Evaluate HTTP status code string (e.g. "200") through the condition engine.
-    Returns default_value when no condition matches.
+    Returns (value, host_name). host_name is None when no condition override applies.
+    Falls back to (default_value, None) when no condition matches.
     """
-    val = _eval_conditions(conditions, status_str)
-    return val if val is not None else default_value
+    val, host_name = _eval_conditions(conditions, status_str)
+    if val is not None:
+        return val, host_name
+    return default_value, None
 
 
 def _eval_http_body(
@@ -317,34 +326,38 @@ def _eval_http_body(
     conditions: list[dict],
     result_strategy: str,
     default_value: Any,
-) -> Any:
+) -> tuple[Any, str | None]:
     """
     Scan response body line by line. Optionally pre-filter with `match`.
     Apply condition engine to each passing line and reduce via strategy.
 
-    Mirrors the log collector's condition mode, applied to response body
+    Returns (value, host_name). host_name comes from the winning condition entry
+    (or None when no condition override applies or no conditions are defined).
+    Falls back to (default_value, None) when no qualifying line is found.
+
+    Mirrors the log collector’s condition mode, applied to response body
     text instead of a log file.
     """
     if not body:
-        return default_value
+        return default_value, None
 
     lines = body.splitlines()
     match_re = re.compile(match_pattern) if match_pattern else None
-    values: list[Any] = []
+    entries: list[tuple[Any, str | None]] = []
 
     for line in lines:
         if match_re and not match_re.search(line):
             continue
 
         if conditions:
-            val = _eval_conditions(conditions, line)
+            val, cond_host = _eval_conditions(conditions, line)
             if val is not None:
-                values.append(val)
+                entries.append((val, cond_host))
         else:
             # No conditions — each matching line contributes 1
-            values.append(1)
+            entries.append((1, None))
 
-    if not values:
-        return default_value
+    if not entries:
+        return default_value, None
 
-    return _resolve_result(values, result_strategy)
+    return _resolve_result_with_host(entries, result_strategy)

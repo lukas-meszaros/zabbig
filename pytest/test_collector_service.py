@@ -199,4 +199,27 @@ class TestServiceCollector:
             )
             result = await ServiceCollector().collect(metric)
         assert result.collector == "service"
+
+    async def test_metric_host_name_on_result(self):
+        proc = MagicMock()
+        proc.returncode = 0
+        with patch("subprocess.run", return_value=proc):
+            metric = make_metric(
+                collector="service", key="host.service.nginx",
+                params={"check_mode": "systemd", "service_name": "nginx"},
+                host_name="svc-override",
+            )
+            result = await ServiceCollector().collect(metric)
+        assert result.host_name == "svc-override"
+
+    async def test_no_host_name_override_is_none(self):
+        proc = MagicMock()
+        proc.returncode = 0
+        with patch("subprocess.run", return_value=proc):
+            metric = make_metric(
+                collector="service", key="host.service.nginx",
+                params={"check_mode": "systemd", "service_name": "nginx"},
+            )
+            result = await ServiceCollector().collect(metric)
+        assert result.host_name is None
         assert result.key == "host.service.nginx"

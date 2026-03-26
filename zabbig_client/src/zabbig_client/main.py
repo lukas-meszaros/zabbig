@@ -205,6 +205,13 @@ async def _run_async(
         len(batch_to_send_only), len(immediate_to_send_only),
     )
 
+    # Log per-metric host_name overrides
+    overrides = [r for r in batch_to_send_only + immediate_to_send_only if r.host_name]
+    if overrides:
+        log.info("Host overrides: %d metric(s) sent under a different host name:", len(overrides))
+        for r in overrides:
+            log.info("  key=%-40s  host=%s", r.key, r.host_name)
+
     # --- Send ---
     sender = SenderManager(config)
 

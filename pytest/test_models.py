@@ -190,6 +190,14 @@ class TestMetricDef:
         m = make_metric(enabled=False)
         assert m.enabled is False
 
+    def test_host_name_default_is_none(self):
+        m = make_metric()
+        assert m.host_name is None
+
+    def test_host_name_stored(self):
+        m = make_metric(host_name="override-host")
+        assert m.host_name == "override-host"
+
 
 # ---------------------------------------------------------------------------
 # MetricResult
@@ -260,6 +268,34 @@ class TestMetricResult:
         metric = make_metric(delivery=DELIVERY_IMMEDIATE)
         r = MetricResult.make_timeout(metric)
         assert r.delivery == DELIVERY_IMMEDIATE
+
+    def test_host_name_default_is_none(self):
+        r = make_result()
+        assert r.host_name is None
+
+    def test_host_name_stored(self):
+        r = make_result(host_name="result-host")
+        assert r.host_name == "result-host"
+
+    def test_make_timeout_propagates_host_name(self):
+        metric = make_metric(host_name="timeout-host")
+        r = MetricResult.make_timeout(metric)
+        assert r.host_name == "timeout-host"
+
+    def test_make_timeout_no_host_name(self):
+        metric = make_metric()
+        r = MetricResult.make_timeout(metric)
+        assert r.host_name is None
+
+    def test_make_error_propagates_host_name(self):
+        metric = make_metric(host_name="error-host")
+        r = MetricResult.make_error(metric, ValueError("boom"))
+        assert r.host_name == "error-host"
+
+    def test_make_fallback_propagates_host_name(self):
+        metric = make_metric(host_name="fallback-host", fallback_value="0")
+        r = MetricResult.make_fallback(metric)
+        assert r.host_name == "fallback-host"
 
 
 # ---------------------------------------------------------------------------

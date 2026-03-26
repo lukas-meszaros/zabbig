@@ -150,3 +150,22 @@ class TestDiskCollector:
             )
             result = await DiskCollector().collect(metric)
         assert "/mydata" in result.source
+
+    async def test_metric_host_name_on_result(self):
+        with patch("os.statvfs", return_value=mock_statvfs()):
+            metric = make_metric(
+                collector="disk", key="host.disk",
+                params={"mount": "/", "mode": "used_percent"},
+                host_name="disk-override",
+            )
+            result = await DiskCollector().collect(metric)
+        assert result.host_name == "disk-override"
+
+    async def test_no_host_name_override_is_none(self):
+        with patch("os.statvfs", return_value=mock_statvfs()):
+            metric = make_metric(
+                collector="disk", key="host.disk",
+                params={"mount": "/", "mode": "used_percent"},
+            )
+            result = await DiskCollector().collect(metric)
+        assert result.host_name is None

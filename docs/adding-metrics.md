@@ -17,10 +17,13 @@ No code changes are needed to add a metric for an existing collector. Edit `metr
   unit: "%"
   delivery: batch
   error_policy: skip
+  # host_name: "remote-server-01"   # optional: override zabbix.host_name for this metric only
   params:
     mount: "/backup"
     mode: used_percent
 ```
+
+> **Host name override:** The optional `host_name` field sends this metric to Zabbix under a different host than the global default. See [configuration.md — Metric-level `host_name`](configuration.md#metric-level-host_name) for details and the full priority chain.
 
 See [configuration.md](configuration.md) for all common fields, and the individual collector docs for the `params` each collector accepts:
 
@@ -94,6 +97,7 @@ class MyCollector(BaseCollector):
             delivery=metric.delivery,
             status=RESULT_OK,
             duration_ms=(time.monotonic() - t0) * 1000,
+            host_name=metric.host_name,   # pass through the metric-level host_name override
         )
 
 

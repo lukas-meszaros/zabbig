@@ -263,6 +263,10 @@ def _parse_metric(
     if fallback_value is not None:
         fallback_value = str(fallback_value)
 
+    host_name = raw.get("host_name")
+    if host_name is not None:
+        host_name = str(host_name)
+
     tags = list(get("tags", []))
     params = dict(raw.get("params", {}))
 
@@ -285,6 +289,7 @@ def _parse_metric(
         fallback_value=fallback_value,
         tags=tags,
         params=params,
+        host_name=host_name,
     )
 
 

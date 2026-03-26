@@ -157,3 +157,21 @@ The regex `nginx: master process` avoids matching worker processes.
     check_mode: systemd
     service_name: redis
 ```
+
+---
+
+## Host Name Override
+
+All metrics support the optional top-level `host_name` field. When set, the metric is sent to Zabbix under that host name instead of the global `zabbix.host_name` from `client.yaml`. Useful when a single client instance checks services on behalf of multiple Zabbix host objects.
+
+```yaml
+- id: svc_nginx
+  collector: service
+  key: host.service.nginx
+  host_name: "web-server-01"    # override for this metric only
+  params:
+    check_mode: systemd
+    service_name: nginx
+```
+
+See [configuration.md](configuration.md#metric-level-host_name) for the full priority chain.

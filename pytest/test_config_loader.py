@@ -351,6 +351,31 @@ class TestLoadMetricsConfig:
         mc = load_metrics_config(path)
         assert mc.metrics[0].fallback_value == "0"
 
+    def test_host_name_parsed(self, tmp_path):
+        path = write_yaml(tmp_path, "metrics.yaml", """
+            version: 1
+            metrics:
+              - id: m1
+                collector: cpu
+                key: host.cpu
+                host_name: override-host
+                params: {mode: percent}
+        """)
+        mc = load_metrics_config(path)
+        assert mc.metrics[0].host_name == "override-host"
+
+    def test_host_name_defaults_to_none(self, tmp_path):
+        path = write_yaml(tmp_path, "metrics.yaml", """
+            version: 1
+            metrics:
+              - id: m1
+                collector: cpu
+                key: host.cpu
+                params: {mode: percent}
+        """)
+        mc = load_metrics_config(path)
+        assert mc.metrics[0].host_name is None
+
     def test_invalid_delivery_strict(self, tmp_path):
         path = write_yaml(tmp_path, "metrics.yaml", """
             version: 1

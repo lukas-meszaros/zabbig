@@ -121,11 +121,11 @@ class SenderManager:
 
     def _do_send(self, results: List[MetricResult], label: str) -> tuple[int, int]:
         """Blocking Zabbix send — tries each server in order, stops on first success."""
-        host_name = self.config.zabbix.host_name
+        default_host_name = self.config.zabbix.host_name
         hosts = self.config.zabbix.server_hosts
         port = self.config.zabbix.server_port
         items = [
-            self._ItemValue(host_name, r.key, r.value)
+            self._ItemValue(r.host_name or default_host_name, r.key, r.value)
             for r in results
         ]
 
@@ -168,9 +168,12 @@ class SenderManager:
                     for resp in chunks:
                         item = results[resp.chunk - 1]
                         if resp.failed:
+                            effective_host = item.host_name or default_host_name
                             log.warning(
-                                "  REJECTED  key=%-40s  value=%s  (node=%s)",
-                                item.key, item.value, node,
+                                "  REJECTED  key=%-40s  value=%s  host=%s%s  (node=%s)",
+                                item.key, item.value, effective_host,
+                                " [override]" if item.host_name else "",
+                                node,
                             )
             return response.processed, response.failed
 
