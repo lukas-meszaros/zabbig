@@ -58,66 +58,7 @@ Scans the **entire file** from byte 0 on every run and returns the total number 
 
 ## Condition Entry Forms
 
-Each entry in `conditions` is evaluated against every line that passed `match`. Evaluation stops at the first matching entry.
-
-### Form 1 — fixed value on regex match
-
-```yaml
-- when: "ERROR|FATAL"
-  value: 2
-```
-
-`when` is a Python regex. If it matches anywhere in the line, `value` is returned for that line.
-
-### Form 2 — numeric extraction with comparison
-
-```yaml
-- extract: 'duration_ms=(\d+(?:\.\d+)?)'
-  compare: gt        # gt | lt | gte | lte | eq
-  threshold: 1000
-  value: "$1"        # "$1" returns the captured number; or use a fixed literal
-```
-
-`extract` must contain exactly one capture group `()`. The captured text is cast to `float` and compared against `threshold`. If the comparison passes, `value` is returned. Use `"$1"` to return the extracted number itself, or a literal to map it to a severity level.
-
-### Form 3 — catch-all
-
-```yaml
-- value: 0
-```
-
-No `when` or `extract` — matches any line that passed `match` but was not matched by an earlier condition. Place this last.
-
-> `when` and `extract` are mutually exclusive in the same entry.
-
----
-
-## Per-condition `host_name`
-
-Any condition entry can include an optional `host_name` field. When a line matches that condition, the resulting metric value is sent to Zabbix under the override host name instead of the metric-level or global host.
-
-```yaml
-- id: app_log_severity
-  collector: log
-  key: app.log.severity
-  host_name: "app-server"           # metric-level fallback
-  params:
-    path: /var/log/myapp/app.log
-    match: "CRITICAL|ERROR|WARN"
-    conditions:
-      - when: "CRITICAL"
-        value: 3
-        host_name: "app-server-critical"   # this condition routes to a different host
-      - when: "ERROR"
-        value: 2
-        host_name: "app-server-errors"
-      - when: "WARN"
-        value: 1
-        # no host_name — uses metric-level "app-server"
-      - value: 0
-```
-
-**Priority chain:** condition `host_name` → metric `host_name` → `zabbix.host_name` in `client.yaml`
+Conditions support three forms: regex match, numeric extraction with comparison, and a catch-all. See [metric-fields.md — Condition Engine](metric-fields.md#condition-engine) for the full syntax reference and `result` strategy table.
 
 ---
 
@@ -329,23 +270,4 @@ Counts POST requests to a specific endpoint since the last run.
 
 ---
 
-## Metric Scheduling
-
-Every log metric supports four optional scheduling fields that control when and how often the metric is collected. All four are inactive when absent.
-
-```yaml
-- id: log_errors_biz
-  collector: log
-  key: app.log.errors.biz
-  value_type: int
-  time_window_from: "0800"         # only monitor during business hours
-  time_window_till: "1800"
-  max_executions_per_day: 48
-  run_frequency: 2                 # every other invocation
-  params:
-    path: "/var/log/myapp/app.log"
-    match: "ERROR"
-    mode: count
-```
-
-See [configuration.md](configuration.md#metric-scheduling-fields) for the full field reference, value rules, and evaluation order.
+For `host_name` override, scheduling fields (`time_window_from`, `time_window_till`, `max_executions_per_day`, `run_frequency`), and all other common metric fields see [metric-fields.md](metric-fields.md).

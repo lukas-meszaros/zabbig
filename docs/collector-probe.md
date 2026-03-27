@@ -139,82 +139,9 @@ This item requires a separate **Trapper** item in Zabbix with key
 
 ## Conditions Reference
 
-### Used in: `http_status` (on status code string) and `http_body` (on body lines)
-
-The condition engine is identical to the log collector. Conditions are evaluated
-in order; the first match wins.
-
-### Form 1 — fixed value on regex match
-
-```yaml
-- when: "^2"
-  value: 1
-```
-
-`when` is a Python regex applied via `re.search`. Return `value` when it matches.
-
-### Form 2 — numeric extraction with comparison
-
-```yaml
-- extract: 'response_time=(\d+(?:\.\d+)?)'
-  compare: gt
-  threshold: 1000
-  value: "$1"
-```
-
-`extract` must contain one capture group. The captured text is cast to `float`
-and compared against `threshold`. Use `compare: gt | lt | gte | lte | eq`.
-Use `value: "$1"` to return the captured number itself.
-
-### Form 3 — catch-all (place last)
-
-```yaml
-- value: 0
-```
-
-No `when` or `extract` — matches any line / status that was not caught earlier.
-
-> `when` and `extract` are mutually exclusive in the same condition entry.
-
----
-
-## Per-condition `host_name`
-
-Any condition entry in `http_status` or `http_body` mode can include an optional `host_name` field. When a line or status code matches that condition, the resulting metric is sent to Zabbix under the override host name instead of the metric-level or global host.
-
-```yaml
-- id: api_health
-  collector: probe
-  key: api.health
-  host_name: "api-cluster"          # metric-level fallback
-  params:
-    mode: http_status
-    url: "http://api-lb:8080/health"
-    conditions:
-      - when: "^200$"
-        value: 1
-        host_name: "api-cluster-primary"   # 200 → route to primary host
-      - when: "^503$"
-        value: 0
-        host_name: "api-cluster-standby"   # 503 → route to standby host
-      - value: 0
-        # no host_name — falls back to metric-level "api-cluster"
-```
-
-**Priority chain:** condition `host_name` → metric `host_name` → `zabbix.host_name` in `client.yaml`
+The condition engine for `http_status` and `http_body` modes is identical to the log collector (Forms 1–3, `result` strategies, per-condition `host_name`). See [metric-fields.md — Condition Engine](metric-fields.md#condition-engine) for the full syntax reference.
 
 > Sub-key items (`response_time_ms`, `ssl_check`) always use the metric-level `host_name` and are not affected by per-condition overrides.
-
----
-
-## `result` Strategies (http\_body mode)
-
-| Strategy | Behaviour |
-|---|---|
-| `last` | Value from the **last** matching body line. Default. |
-| `first` | Value from the **first** matching body line. |
-| `max` | Numerically highest value across all matching lines. Non-numeric values skipped. |
-| `min` | Numerically lowest value across all matching lines. |
 
 ---
 
@@ -334,23 +261,4 @@ references.
 
 ---
 
-## Metric Scheduling
-
-Every probe metric supports four optional scheduling fields that control when and how often the metric is collected. All four are inactive when absent.
-
-```yaml
-- id: probe_api_health_biz
-  collector: probe
-  key: host.probe.api.health.biz
-  value_type: int
-  time_window_from: "0600"         # only probe during operational hours
-  time_window_till: "2300"
-  max_executions_per_day: 100
-  run_frequency: 3                 # every third invocation
-  params:
-    mode: tcp
-    host: "api.internal"
-    port: 443
-```
-
-See [configuration.md](configuration.md#metric-scheduling-fields) for the full field reference, value rules, and evaluation order.
+For `host_name` override, scheduling fields (`time_window_from`, `time_window_till`, `max_executions_per_day`, `run_frequency`), and all other common metric fields see [metric-fields.md](metric-fields.md).
