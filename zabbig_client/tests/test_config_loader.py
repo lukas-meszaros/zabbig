@@ -308,5 +308,219 @@ metrics:
             os.unlink(path)
 
 
+class TestScheduleFieldValidation(unittest.TestCase):
+    """Tests for config_loader validation of the four scheduling fields."""
+
+    BASE = """
+version: 1
+defaults:
+  enabled: true
+  delivery: batch
+  timeout_seconds: 10
+  error_policy: skip
+metrics:
+  - id: cpu_sched
+    name: CPU sched test
+    enabled: true
+    collector: cpu
+    key: host.cpu.sched
+    params:
+      mode: percent
+"""
+
+    def _yaml_with(self, extra_fields: str) -> str:
+        """Insert extra top-level fields into the metric entry."""
+        return self.BASE.replace(
+            "      mode: percent",
+            f"      mode: percent\n{extra_fields}",
+        )
+
+    # --- time_window_from ---
+
+    def test_time_window_from_valid_string(self):
+        yaml_content = self._yaml_with('    time_window_from: "0800"')
+        path = _write_yaml(yaml_content)
+        try:
+            cfg = load_metrics_config(path)
+            self.assertEqual(cfg.metrics[0].time_window_from, "0800")
+        finally:
+            os.unlink(path)
+
+    def test_time_window_from_valid_int(self):
+        # YAML without quotes: 800 → int 800 → normalised to "0800"
+        yaml_content = self._yaml_with("    time_window_from: 800")
+        path = _write_yaml(yaml_content)
+        try:
+            cfg = load_metrics_config(path)
+            self.assertEqual(cfg.metrics[0].time_window_from, "0800")
+        finally:
+            os.unlink(path)
+
+    def test_time_window_from_invalid_hours_raises(self):
+        yaml_content = self._yaml_with('    time_window_from: "2500"')
+        path = _write_yaml(yaml_content)
+        try:
+            with self.assertRaises(Exception):
+                load_metrics_config(path)
+        finally:
+            os.unlink(path)
+
+    def test_time_window_from_invalid_minutes_raises(self):
+        yaml_content = self._yaml_with('    time_window_from: "0860"')
+        path = _write_yaml(yaml_content)
+        try:
+            with self.assertRaises(Exception):
+                load_metrics_config(path)
+        finally:
+            os.unlink(path)
+
+    def test_time_window_from_absent_is_none(self):
+        path = _write_yaml(self.BASE)
+        try:
+            cfg = load_metrics_config(path)
+            self.assertIsNone(cfg.metrics[0].time_window_from)
+        finally:
+            os.unlink(path)
+
+    # --- time_window_till ---
+
+    def test_time_window_till_valid(self):
+        yaml_content = self._yaml_with('    time_window_till: "1800"')
+        path = _write_yaml(yaml_content)
+        try:
+            cfg = load_metrics_config(path)
+            self.assertEqual(cfg.metrics[0].time_window_till, "1800")
+        finally:
+            os.unlink(path)
+
+    def test_time_window_till_invalid_raises(self):
+        yaml_content = self._yaml_with('    time_window_till: "2500"')
+        path = _write_yaml(yaml_content)
+        try:
+            with self.assertRaises(Exception):
+                load_metrics_config(path)
+        finally:
+            os.unlink(path)
+
+    # --- max_executions_per_day ---
+
+    def test_max_executions_valid(self):
+        yaml_content = self._yaml_with("    max_executions_per_day: 5")
+        path = _write_yaml(yaml_content)
+        try:
+            cfg = load_metrics_config(path)
+            self.assertEqual(cfg.metrics[0].max_executions_per_day, 5)
+        finally:
+            os.unlink(path)
+
+    def test_max_executions_zero_allowed(self):
+        yaml_content = self._yaml_with("    max_executions_per_day: 0")
+        path = _write_yaml(yaml_content)
+        try:
+            cfg = load_metrics_config(path)
+            self.assertEqual(cfg.metrics[0].max_executions_per_day, 0)
+        finally:
+            os.unlink(path)
+
+    def test_max_executions_negative_raises(self):
+        yaml_content = self._yaml_with("    max_executions_per_day: -1")
+        path = _write_yaml(yaml_content)
+        try:
+            with self.assertRaises(Exception):
+                load_metrics_config(path)
+        finally:
+            os.unlink(path)
+
+    def test_max_executions_absent_is_none(self):
+        path = _write_yaml(self.BASE)
+        try:
+            cfg = load_metrics_config(path)
+            self.assertIsNone(cfg.metrics[0].max_executions_per_day)
+        finally:
+            os.unlink(path)
+
+    # --- run_frequency ---
+
+    def test_run_frequency_integer(self):
+        yaml_content = self._yaml_with("    run_frequency: 5")
+        path = _write_yaml(yaml_content)
+        try:
+            cfg = load_metrics_config(path)
+            self.assertEqual(cfg.metrics[0].run_frequency, 5)
+        finally:
+            os.unlink(path)
+
+    def test_run_frequency_zero_allowed(self):
+        yaml_content = self._yaml_with("    run_frequency: 0")
+        path = _write_yaml(yaml_content)
+        try:
+            cfg = load_metrics_config(path)
+            self.assertEqual(cfg.metrics[0].run_frequency, 0)
+        finally:
+            os.unlink(path)
+
+    def test_run_frequency_even(self):
+        yaml_content = self._yaml_with('    run_frequency: "even"')
+        path = _write_yaml(yaml_content)
+        try:
+            cfg = load_metrics_config(path)
+            self.assertEqual(cfg.metrics[0].run_frequency, "even")
+        finally:
+            os.unlink(path)
+
+    def test_run_frequency_odd(self):
+        yaml_content = self._yaml_with('    run_frequency: "odd"')
+        path = _write_yaml(yaml_content)
+        try:
+            cfg = load_metrics_config(path)
+            self.assertEqual(cfg.metrics[0].run_frequency, "odd")
+        finally:
+            os.unlink(path)
+
+    def test_run_frequency_invalid_string_raises(self):
+        yaml_content = self._yaml_with('    run_frequency: "weekly"')
+        path = _write_yaml(yaml_content)
+        try:
+            with self.assertRaises(Exception):
+                load_metrics_config(path)
+        finally:
+            os.unlink(path)
+
+    def test_run_frequency_negative_raises(self):
+        yaml_content = self._yaml_with("    run_frequency: -3")
+        path = _write_yaml(yaml_content)
+        try:
+            with self.assertRaises(Exception):
+                load_metrics_config(path)
+        finally:
+            os.unlink(path)
+
+    def test_run_frequency_absent_is_none(self):
+        path = _write_yaml(self.BASE)
+        try:
+            cfg = load_metrics_config(path)
+            self.assertIsNone(cfg.metrics[0].run_frequency)
+        finally:
+            os.unlink(path)
+
+    def test_all_schedule_fields_together(self):
+        yaml_content = self._yaml_with(
+            '    time_window_from: "0800"\n'
+            '    time_window_till: "2000"\n'
+            "    max_executions_per_day: 10\n"
+            "    run_frequency: 2\n"
+        )
+        path = _write_yaml(yaml_content)
+        try:
+            cfg = load_metrics_config(path)
+            m = cfg.metrics[0]
+            self.assertEqual(m.time_window_from, "0800")
+            self.assertEqual(m.time_window_till, "2000")
+            self.assertEqual(m.max_executions_per_day, 10)
+            self.assertEqual(m.run_frequency, 2)
+        finally:
+            os.unlink(path)
+
+
 if __name__ == "__main__":
     unittest.main()

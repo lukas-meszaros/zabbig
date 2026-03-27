@@ -418,6 +418,95 @@ For collectors that use the `conditions` engine (`log` in `condition` mode, `pro
 
 ---
 
+### Metric scheduling fields
+
+Every metric entry supports four optional scheduling fields. Together they control **when** and **how often** a metric is collected. All four default to "no restriction" when absent.
+
+> **Dry-run bypass:** when `--dry-run` is passed on the command line, all scheduling constraints are ignored and every enabled metric is always collected.
+
+#### `time_window_from`
+
+Type: string `"HHMM"` (4 digits, 24-hour clock)
+
+The metric is only collected when the current local time is **on or after** this value. Activates the metric from the specified time until midnight.
+
+```yaml
+time_window_from: "0800"    # collect from 08:00 onwards
+```
+
+#### `time_window_till`
+
+Type: string `"HHMM"` (4 digits, 24-hour clock)
+
+The metric is only collected when the current local time is **before** this value. Activates the metric from midnight until the specified time.
+
+```yaml
+time_window_till: "1800"    # collect until 18:00
+```
+
+#### Combined time window
+
+Use both fields together to restrict to a specific period of the day:
+
+```yaml
+time_window_from: "0800"
+time_window_till: "1800"    # active 08:00–18:00
+```
+
+> **Overnight windows** (e.g. 22:00–06:00) require two separate metric entries with the same Zabbix key.
+
+#### `max_executions_per_day`
+
+Type: integer ≥ 0 (`0` or absent = no limit)
+
+Caps how many times the metric is collected per calendar day. Once the daily quota is reached, the metric is skipped for the rest of the day. The counter resets automatically at midnight (tracked in `state/schedule.json`).
+
+```yaml
+max_executions_per_day: 5    # collect at most 5 times today
+```
+
+#### `run_frequency`
+
+Type: integer ≥ 0 **or** the string `"even"` / `"odd"` (`0` or absent = no limit)
+
+Controls on which zabbig invocations the metric runs, relative to a per-day run counter that starts at 1 and increments with every cron execution:
+
+| Value | Executes on invocation # |
+|---|---|
+| `0` or absent | every invocation |
+| `1` | every invocation |
+| `2` | 1, 3, 5, 7, … |
+| `5` | 1, 6, 11, 16, … |
+| `"odd"` | 1, 3, 5, 7, … |
+| `"even"` | 2, 4, 6, 8, … |
+
+```yaml
+run_frequency: 2        # every second invocation
+run_frequency: "even"   # even-numbered invocations only
+```
+
+The run counter resets to 1 at the start of each new calendar day (stored in `state/schedule.json`).
+
+#### Full example — all four fields combined
+
+```yaml
+- id: cpu_util_biz
+  collector: cpu
+  key: host.cpu.util.biz
+  value_type: float
+  unit: "%"
+  time_window_from: "0800"          # only during business hours
+  time_window_till: "1800"
+  max_executions_per_day: 48        # at most 48 times per day
+  run_frequency: 2                  # every other invocation
+  params:
+    mode: percent
+```
+
+Constraints are evaluated in this order: time window → daily quota → run frequency. The first failing constraint skips the metric for that run; the remaining constraints are not evaluated.
+
+---
+
 ### `collector_defaults` built-in values
 
 | Collector | `timeout_seconds` | `delivery` |

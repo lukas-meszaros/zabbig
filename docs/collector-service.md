@@ -175,3 +175,24 @@ All metrics support the optional top-level `host_name` field. When set, the metr
 ```
 
 See [configuration.md](configuration.md#metric-level-host_name) for the full priority chain.
+
+---
+
+## Metric Scheduling
+
+Every service metric supports four optional scheduling fields that control when and how often the metric is collected. All four are inactive when absent.
+
+```yaml
+- id: nginx_running_biz
+  collector: service
+  key: host.service.nginx.running.biz
+  value_type: int
+  time_window_from: "0600"         # only during operational hours
+  time_window_till: "2200"
+  run_frequency: 5                 # every fifth invocation
+  params:
+    check_mode: systemd
+    service_name: nginx
+```
+
+See [configuration.md](configuration.md#metric-scheduling-fields) for the full field reference, value rules, and evaluation order.

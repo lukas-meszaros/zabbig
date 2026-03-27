@@ -213,3 +213,26 @@ All metrics support the optional top-level `host_name` field. When set, the metr
 ```
 
 See [configuration.md](configuration.md#metric-level-host_name) for the full priority chain.
+
+---
+
+## Metric Scheduling
+
+Every network metric supports four optional scheduling fields that control when and how often the metric is collected. All four are inactive when absent.
+
+```yaml
+- id: eth0_rx_biz
+  collector: network
+  key: host.net.eth0.rx_bytes_per_sec.biz
+  value_type: float
+  unit: "B/s"
+  time_window_from: "0800"
+  time_window_till: "1800"
+  max_executions_per_day: 120
+  run_frequency: 2
+  params:
+    interface: eth0
+    mode: rx_bytes_per_sec
+```
+
+See [configuration.md](configuration.md#metric-scheduling-fields) for the full field reference, value rules, and evaluation order.

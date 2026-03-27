@@ -10,11 +10,17 @@ Options:
     --metrics  PATH   Path to metrics.yaml      (default: metrics.yaml)
     --dry-run         Collect but do not send to Zabbix
     --log-level LEVEL Override logging.level from client.yaml
+    --validate        Validate metrics.yaml and exit (no collectors, no Zabbix)
 
 Exit codes:
     0  All metrics collected and sent successfully
     1  Partial failure (some collectors or sends failed)
     2  Fatal error (config, lock, timeout)
+
+    When --validate is used:
+    0  File is valid — no issues found
+    1  File parsed but issues were found
+    2  File not found or YAML syntax error
 """
 import os
 import sys
@@ -26,7 +32,7 @@ if _SRC not in sys.path:
     sys.path.insert(0, _SRC)
 
 import argparse
-from zabbig_client.main import run
+from zabbig_client.main import run, validate
 
 
 def _parse_args() -> argparse.Namespace:
@@ -59,11 +65,26 @@ def _parse_args() -> argparse.Namespace:
         choices=["DEBUG", "INFO", "WARNING", "ERROR"],
         help="Override the log level from client.yaml",
     )
+    parser.add_argument(
+        "--validate",
+        action="store_true",
+        default=False,
+        help=(
+            "Validate the metrics file without running collectors or connecting "
+            "to Zabbix. Uses --metrics path (or the default metrics.yaml). "
+            "Does not require --config. "
+            "Exit 0 = valid, 1 = issues found, 2 = file unreadable."
+        ),
+    )
     return parser.parse_args()
 
 
 if __name__ == "__main__":
     args = _parse_args()
+
+    if args.validate:
+        sys.exit(validate(metrics_config_path=args.metrics))
+
     exit_code = run(
         client_config_path=args.config,
         metrics_config_path=args.metrics,

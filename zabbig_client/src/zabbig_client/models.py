@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import time
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import Optional, Union
 
 
 # ---------------------------------------------------------------------------
@@ -118,6 +118,11 @@ class MetricDef:
     tags: list = field(default_factory=list)
     params: dict = field(default_factory=dict)
     host_name: Optional[str] = None
+    # --- Schedule constraints (all optional; None / 0 = no restriction) ---
+    time_window_from: Optional[str] = None          # "HHMM" — active from this time until midnight
+    time_window_till: Optional[str] = None          # "HHMM" — active from midnight until this time
+    max_executions_per_day: Optional[int] = None    # max times this metric runs per calendar day
+    run_frequency: Optional[Union[int, str]] = None # every Nth run, or "even" / "odd"
 
 
 @dataclass
@@ -229,5 +234,6 @@ class RunSummary:
     sent_batch: int = 0
     sent_immediate: int = 0
     sender_failures: int = 0
+    schedule_skipped: int = 0
     duration_ms: float = 0.0
     success: bool = True

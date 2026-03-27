@@ -10,7 +10,7 @@ from __future__ import annotations
 import logging
 import os
 import socket
-from typing import Any
+from typing import Any, Union
 
 import yaml  # vendored pure-Python PyYAML in src/yaml/
 
@@ -267,6 +267,12 @@ def _parse_metric(
     if host_name is not None:
         host_name = str(host_name)
 
+    # --- Schedule constraints ---
+    time_window_from = _parse_hhmm_field(raw, metric_id, "time_window_from", strict)
+    time_window_till = _parse_hhmm_field(raw, metric_id, "time_window_till", strict)
+    max_executions_per_day = _parse_int_nonneg_field(raw, metric_id, "max_executions_per_day", strict)
+    run_frequency = _parse_run_frequency_field(raw, metric_id, strict)
+
     tags = list(get("tags", []))
     params = dict(raw.get("params", {}))
 
@@ -290,6 +296,10 @@ def _parse_metric(
         tags=tags,
         params=params,
         host_name=host_name,
+        time_window_from=time_window_from,
+        time_window_till=time_window_till,
+        max_executions_per_day=max_executions_per_day,
+        run_frequency=run_frequency,
     )
 
 
@@ -421,6 +431,95 @@ def _validate_collector_params(metric_id: str, collector: str, params: dict, str
                     )
 
 
+def _parse_hhmm_field(raw: dict, metric_id: str, field_name: str, strict: bool) -> "str | None":
+    """
+    Parse a time-window field (time_window_from / time_window_till).
+
+    Accepts a quoted string ("0800") or an unquoted integer (800, 1800) from
+    YAML and always returns a normalised 4-character string, e.g. "0800".
+    Returns None and emits a config error if the value is invalid.
+    """
+    value = raw.get(field_name)
+    if value is None:
+        return None
+    # YAML may deliver an unquoted value like 800 as int 800; zfill handles it.
+    s = str(value).zfill(4)
+    if not s.isdigit() or len(s) != 4:
+        _config_error(
+            f"Metric '{metric_id}': {field_name}='{value}' must be a 4-digit HHMM value "
+            "(e.g. \"0800\", \"2359\")", strict
+        )
+        return None
+    h, m = int(s[:2]), int(s[2:])
+    if h > 23:
+        _config_error(
+            f"Metric '{metric_id}': {field_name}='{value}' has invalid hours ({h})", strict
+        )
+        return None
+    if m > 59:
+        _config_error(
+            f"Metric '{metric_id}': {field_name}='{value}' has invalid minutes ({m})", strict
+        )
+        return None
+    return s
+
+
+def _parse_int_nonneg_field(raw: dict, metric_id: str, field_name: str, strict: bool) -> "int | None":
+    """Parse a non-negative integer field; returns None if absent or invalid."""
+    value = raw.get(field_name)
+    if value is None:
+        return None
+    try:
+        i = int(value)
+    except (TypeError, ValueError):
+        _config_error(
+            f"Metric '{metric_id}': {field_name}={value!r} must be an integer", strict
+        )
+        return None
+    if i < 0:
+        _config_error(
+            f"Metric '{metric_id}': {field_name}={value} must be >= 0", strict
+        )
+        return None
+    return i
+
+
+def _parse_run_frequency_field(raw: dict, metric_id: str, strict: bool) -> "Union[int, str] | None":
+    """
+    Parse the run_frequency field.
+
+    Valid values:
+      - An integer >= 0  (0 or absent → no restriction; N>1 → every Nth run)
+      - The string "even" or "odd"
+    Returns None if the field is absent or invalid.
+    """
+    value = raw.get("run_frequency")
+    if value is None:
+        return None
+    if isinstance(value, str):
+        if value in ("even", "odd"):
+            return value
+        _config_error(
+            f"Metric '{metric_id}': run_frequency='{value}' must be an integer or \"even\"/\"odd\"",
+            strict,
+        )
+        return None
+    try:
+        i = int(value)
+    except (TypeError, ValueError):
+        _config_error(
+            f"Metric '{metric_id}': run_frequency={value!r} must be an integer or \"even\"/\"odd\"",
+            strict,
+        )
+        return None
+    if i < 0:
+        _config_error(
+            f"Metric '{metric_id}': run_frequency={value} must be >= 0", strict
+        )
+        return None
+    return i
+
+
 def _validate_client_config(cfg: ClientConfig) -> None:
     if not cfg.zabbix.server_hosts:
         raise ConfigError("zabbix.server_host must contain at least one entry")
@@ -446,3 +545,60 @@ def _config_error(message: str, strict: bool) -> None:
     if strict:
         raise ConfigError(message)
     log.warning("Config warning (strict=False): %s", message)
+
+
+# ---------------------------------------------------------------------------
+# Standalone validator — collects all issues without raising
+# ---------------------------------------------------------------------------
+
+_WARNING_PREFIX = "Config warning (strict=False): "
+
+
+def validate_metrics_file(path: str) -> tuple[list[str], list]:
+    """
+    Validate *path* as a metrics.yaml file, collecting every issue without
+    raising.  Always finishes — even when multiple problems are present.
+
+    Returns:
+        (issues, metrics)
+          issues  — list of human-readable problem strings (empty = all OK)
+          metrics — list of MetricDef objects that were parsed successfully
+                    (may be partial when some entries contained errors)
+
+    Raises:
+        FileNotFoundError — when the file does not exist (caller decides output)
+    """
+    issues: list[str] = []
+
+    # Phase 1 — syntax check only; we want the YAML error message first if any.
+    try:
+        _read_yaml(path)
+    except ConfigError as exc:
+        issues.append(str(exc))
+        return issues, []
+    # FileNotFoundError bubbles up to caller
+
+    # Phase 2 — full validation with strict=False, capturing every warning.
+    class _IssueCollector(logging.Handler):
+        def emit(self, record: logging.LogRecord) -> None:
+            msg = record.getMessage()
+            issues.append(
+                msg[len(_WARNING_PREFIX):]
+                if msg.startswith(_WARNING_PREFIX)
+                else msg
+            )
+
+    handler = _IssueCollector(level=logging.WARNING)
+    cfg_log = logging.getLogger(__name__)
+    cfg_log.addHandler(handler)
+    try:
+        mc = load_metrics_config(path, strict=False)
+        metrics = mc.metrics
+    except ConfigError as exc:
+        # Shouldn't normally happen (strict=False), but be defensive.
+        issues.insert(0, str(exc))
+        metrics = []
+    finally:
+        cfg_log.removeHandler(handler)
+
+    return issues, metrics

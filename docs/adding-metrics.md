@@ -18,12 +18,18 @@ No code changes are needed to add a metric for an existing collector. Edit `metr
   delivery: batch
   error_policy: skip
   # host_name: "remote-server-01"   # optional: override zabbix.host_name for this metric only
+  # time_window_from: "0800"        # optional: only collect from 08:00
+  # time_window_till: "2200"        # optional: stop collecting at 22:00
+  # max_executions_per_day: 10      # optional: cap daily execution count
+  # run_frequency: 2                # optional: every 2nd invocation (or "even"/"odd")
   params:
     mount: "/backup"
     mode: used_percent
 ```
 
 > **Host name override:** The optional `host_name` field sends this metric to Zabbix under a different host than the global default. See [configuration.md — Metric-level `host_name`](configuration.md#metric-level-host_name) for details and the full priority chain.
+
+> **Metric scheduling:** The four optional scheduling fields (`time_window_from`, `time_window_till`, `max_executions_per_day`, `run_frequency`) control when and how often a metric is collected. All are inactive when absent and are bypassed by `--dry-run`. See [configuration.md — Metric scheduling fields](configuration.md#metric-scheduling-fields) for the full reference.
 
 See [configuration.md](configuration.md) for all common fields, and the individual collector docs for the `params` each collector accepts:
 
@@ -35,7 +41,19 @@ See [configuration.md](configuration.md) for all common fields, and the individu
 - [Log](collector-log.md) — `path`, `match`, `mode`, `conditions`, `result`, `default_value`
 - [Probe](collector-probe.md) — `host`, `port`, `mode`, `timeout_seconds`, `conditions`, `result`
 
-### 2. Verify with a dry-run
+### 2. Validate the metrics file
+
+```bash
+python3 run.py --validate
+# or with a custom path:
+python3 run.py --validate --metrics /path/to/metrics.yaml
+```
+
+Checks the YAML structure and every field value (including the new scheduling fields) without running any collectors or connecting to Zabbix. All issues are reported in one pass — the command always completes even when multiple errors are present.
+
+Exit codes: `0` = valid, `1` = issues found, `2` = file not found or YAML syntax error.
+
+### 3. Verify with a dry-run
 
 ```bash
 python3 run.py --dry-run
@@ -43,7 +61,7 @@ python3 run.py --dry-run
 
 This runs all collectors without sending anything to Zabbix. Check that the new metric appears in the output with the expected value.
 
-### 3. Provision the Zabbix item
+### 4. Provision the Zabbix item
 
 ```bash
 # From inside the Docker container
@@ -55,7 +73,7 @@ cd zabbix_update && python3 create_trapper_items.py --config ../zabbig_client/cl
 
 `create_trapper_items.py` is idempotent — existing items are skipped, new ones are created.
 
-### 4. Start a real run and verify in Zabbix
+### 5. Start a real run and verify in Zabbix
 
 ```bash
 docker exec zabbig-client python3 run.py --config client.docker.yaml

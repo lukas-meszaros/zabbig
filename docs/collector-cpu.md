@@ -126,3 +126,25 @@ All metrics support the optional top-level `host_name` field. When set, the metr
 ```
 
 See [configuration.md](configuration.md#metric-level-host_name) for the full priority chain.
+
+---
+
+## Metric Scheduling
+
+Every CPU metric supports four optional scheduling fields that control when and how often the metric is collected. All four are inactive when absent.
+
+```yaml
+- id: cpu_util_biz
+  collector: cpu
+  key: host.cpu.util.biz
+  value_type: float
+  unit: "%"
+  time_window_from: "0800"         # only collect from 08:00
+  time_window_till: "1800"         # stop collecting at 18:00
+  max_executions_per_day: 48       # no more than 48 times per day
+  run_frequency: 2                 # every other zabbig invocation
+  params:
+    mode: percent
+```
+
+See [configuration.md](configuration.md#metric-scheduling-fields) for the full field reference, value rules, and evaluation order.

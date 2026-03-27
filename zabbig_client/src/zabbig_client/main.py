@@ -23,16 +23,67 @@ import sys
 import time
 from typing import List
 
-from .config_loader import ConfigError, load_client_config, load_metrics_config
+from .config_loader import ConfigError, load_client_config, load_metrics_config, validate_metrics_file
 from .locking import LockError, RunLock
 from .logging_setup import setup_logging
 from .models import ClientConfig, MetricDef, MetricsConfig, RunSummary
 from .result_router import route
 from .runner import run_all_collectors, update_summary
+from .scheduler import should_execute, today_str
 from .sender_manager import SenderManager
-from .state_manager import save_state
+from .state_manager import save_state, load_schedule_state, save_schedule_state
 
 log = logging.getLogger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# Validator entry point  (--validate flag)
+# ---------------------------------------------------------------------------
+
+def validate(metrics_config_path: str) -> int:
+    """
+    Validate a metrics.yaml file and print a human-readable report to stdout.
+
+    Unlike the normal run path this function:
+      - requires no client.yaml
+      - acquires no run lock
+      - runs no collectors
+      - makes no Zabbix connection
+      - always completes — all issues are collected before reporting
+
+    Returns:
+      0 — file is valid (no issues found)
+      1 — file parsed but issues were found
+      2 — file could not be read (not found or YAML syntax error)
+    """
+    print(f"Validating: {metrics_config_path}")
+
+    try:
+        issues, metrics = validate_metrics_file(metrics_config_path)
+    except FileNotFoundError:
+        print(f"ERROR: File not found: {metrics_config_path}", file=sys.stderr)
+        return 2
+
+    # Print the list of successfully parsed metrics.
+    if metrics:
+        print(f"\nMetrics parsed ({len(metrics)}):")
+        id_w = max(len(m.id) for m in metrics)
+        col_w = max(len(m.collector) for m in metrics)
+        for m in metrics:
+            print(f"  {m.id:<{id_w}}  {m.collector:<{col_w}}  {m.key}")
+    else:
+        print("\n  (no metrics were successfully parsed)")
+
+    # Print issues if any.
+    if issues:
+        print(f"\nIssues found ({len(issues)}):")
+        for i, issue in enumerate(issues, 1):
+            print(f"  [{i}] {issue}")
+        print(f"\nValidation complete: {len(metrics)} metric(s) parsed, {len(issues)} issue(s) found.")
+        return 1
+
+    print(f"\nValidation passed: {len(metrics)} metric(s), no issues found.")
+    return 0
 
 
 # ---------------------------------------------------------------------------
@@ -105,7 +156,7 @@ def run(
         log.warning("No metrics are enabled. Nothing to do.")
         return 0
 
-    # --- Acquire run lock ---
+    # --- Acquire run lock and execute ---
     summary = RunSummary(
         total_configured=len(all_metrics),
         enabled=len(enabled_metrics),
@@ -113,9 +164,61 @@ def run(
 
     try:
         with RunLock(client_config.runtime.lock_file):
+            # ------------------------------------------------------------------
+            # Schedule filtering: compute today's run counter and decide which
+            # metrics are eligible for this invocation.
+            # ------------------------------------------------------------------
+            schedule_state = load_schedule_state(client_config)
+            today = today_str()
+            if schedule_state.get("date") != today:
+                # New calendar day — reset all counters.
+                schedule_state = {"date": today, "run_counter": 0, "metrics": {}}
+
+            run_counter: int = schedule_state.get("run_counter", 0) + 1
+            schedule_state["run_counter"] = run_counter
+            metric_exec_counts: dict = schedule_state.get("metrics", {})
+
+            scheduled_metrics: List[MetricDef] = []
+            for m in enabled_metrics:
+                exec_count = metric_exec_counts.get(m.id, {}).get("execution_count", 0)
+                can_run, reason = should_execute(
+                    m, run_counter, exec_count,
+                    dry_run=client_config.runtime.dry_run,
+                )
+                if can_run:
+                    scheduled_metrics.append(m)
+                else:
+                    log.debug("[SCHED-SKIP] key=%-40s  reason=%s", m.key, reason)
+                    summary.schedule_skipped += 1
+
+            if summary.schedule_skipped:
+                log.info(
+                    "Schedule: %d of %d enabled metric(s) skipped for this run "
+                    "(run_counter=%d)",
+                    summary.schedule_skipped, len(enabled_metrics), run_counter,
+                )
+
+            if not scheduled_metrics:
+                log.info("No metrics scheduled for run #%d — nothing to collect.", run_counter)
+                if not client_config.runtime.dry_run:
+                    save_schedule_state(client_config, schedule_state)
+                save_state(client_config, summary)
+                _log_summary(summary)
+                return 0
+
             exit_code = asyncio.run(
-                _run_with_timeout(client_config, enabled_metrics, summary)
+                _run_with_timeout(client_config, scheduled_metrics, summary)
             )
+
+            # Update per-metric execution counts (skip in dry-run so state
+            # files are not mutated by test/preview invocations).
+            if not client_config.runtime.dry_run:
+                for m in scheduled_metrics:
+                    entry = metric_exec_counts.setdefault(m.id, {"execution_count": 0})
+                    entry["execution_count"] += 1
+                schedule_state["metrics"] = metric_exec_counts
+                save_schedule_state(client_config, schedule_state)
+
     except LockError as exc:
         log.error("Cannot acquire run lock: %s", exc)
         return 2
@@ -258,6 +361,7 @@ def _log_summary(summary: RunSummary) -> None:
     log.info("Run summary:")
     log.info("  Total configured  : %d", summary.total_configured)
     log.info("  Enabled           : %d", summary.enabled)
+    log.info("  Sched. skipped    : %d", summary.schedule_skipped)
     log.info("  Collected OK      : %d", summary.collected_ok)
     log.info("  Failed            : %d", summary.collected_failed)
     log.info("  Timed out         : %d", summary.collected_timeout)

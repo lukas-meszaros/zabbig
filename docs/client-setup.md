@@ -40,6 +40,10 @@ docker compose -f docker-compose.client.yml ps
 The container stays alive indefinitely (`command: sleep infinity`) so you can exec into it at any time.
 
 ```bash
+# Validate metrics.yaml before deploying — no Zabbix connection needed
+docker exec zabbig-client python3 run.py --validate
+docker exec zabbig-client python3 run.py --validate --metrics /path/to/custom-metrics.yaml
+
 # Dry-run — collects metrics, prints results, does NOT send to Zabbix
 docker exec zabbig-client python3 run.py --config client.docker.yaml --dry-run
 

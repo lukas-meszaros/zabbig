@@ -326,3 +326,26 @@ Counts POST requests to a specific endpoint since the last run.
     match: 'POST /api/v1/payment'
     mode: count
 ```
+
+---
+
+## Metric Scheduling
+
+Every log metric supports four optional scheduling fields that control when and how often the metric is collected. All four are inactive when absent.
+
+```yaml
+- id: log_errors_biz
+  collector: log
+  key: app.log.errors.biz
+  value_type: int
+  time_window_from: "0800"         # only monitor during business hours
+  time_window_till: "1800"
+  max_executions_per_day: 48
+  run_frequency: 2                 # every other invocation
+  params:
+    path: "/var/log/myapp/app.log"
+    match: "ERROR"
+    mode: count
+```
+
+See [configuration.md](configuration.md#metric-scheduling-fields) for the full field reference, value rules, and evaluation order.

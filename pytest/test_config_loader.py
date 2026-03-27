@@ -527,3 +527,151 @@ class TestLoadMetricsConfig:
         """)
         mc = load_metrics_config(path)
         assert len(mc.metrics) == 1
+
+
+# ---------------------------------------------------------------------------
+# Schedule field validation
+# ---------------------------------------------------------------------------
+
+class TestScheduleFieldValidation:
+    """Tests for parsing of time_window_from/till, max_executions_per_day,
+    and run_frequency in metrics.yaml."""
+
+    BASE = textwrap.dedent("""
+        version: 1
+        defaults:
+          enabled: true
+          delivery: batch
+          timeout_seconds: 10
+          error_policy: skip
+        metrics:
+          - id: cpu_sched
+            collector: cpu
+            key: host.cpu.sched
+            params:
+              mode: percent
+    """)
+
+    def _with_field(self, tmp_path, field_yaml: str) -> str:
+        content = self.BASE.rstrip() + "\n    " + field_yaml + "\n"
+        return write_yaml(tmp_path, "metrics.yaml", content)
+
+    # --- time_window_from ---
+
+    def test_time_window_from_quoted_string(self, tmp_path):
+        path = self._with_field(tmp_path, 'time_window_from: "0800"')
+        cfg = load_metrics_config(path)
+        assert cfg.metrics[0].time_window_from == "0800"
+
+    def test_time_window_from_integer(self, tmp_path):
+        # Unquoted integer: 800 → normalised to "0800"
+        path = self._with_field(tmp_path, "time_window_from: 800")
+        cfg = load_metrics_config(path)
+        assert cfg.metrics[0].time_window_from == "0800"
+
+    def test_time_window_from_absent_is_none(self, tmp_path):
+        path = write_yaml(tmp_path, "metrics.yaml", self.BASE)
+        cfg = load_metrics_config(path)
+        assert cfg.metrics[0].time_window_from is None
+
+    def test_time_window_from_invalid_hours_raises(self, tmp_path):
+        path = self._with_field(tmp_path, 'time_window_from: "2500"')
+        with pytest.raises(ConfigError):
+            load_metrics_config(path)
+
+    def test_time_window_from_invalid_minutes_raises(self, tmp_path):
+        path = self._with_field(tmp_path, 'time_window_from: "0860"')
+        with pytest.raises(ConfigError):
+            load_metrics_config(path)
+
+    # --- time_window_till ---
+
+    def test_time_window_till_valid(self, tmp_path):
+        path = self._with_field(tmp_path, 'time_window_till: "1800"')
+        cfg = load_metrics_config(path)
+        assert cfg.metrics[0].time_window_till == "1800"
+
+    def test_time_window_till_invalid_raises(self, tmp_path):
+        path = self._with_field(tmp_path, 'time_window_till: "2500"')
+        with pytest.raises(ConfigError):
+            load_metrics_config(path)
+
+    def test_time_window_till_absent_is_none(self, tmp_path):
+        path = write_yaml(tmp_path, "metrics.yaml", self.BASE)
+        cfg = load_metrics_config(path)
+        assert cfg.metrics[0].time_window_till is None
+
+    # --- max_executions_per_day ---
+
+    def test_max_executions_valid(self, tmp_path):
+        path = self._with_field(tmp_path, "max_executions_per_day: 5")
+        cfg = load_metrics_config(path)
+        assert cfg.metrics[0].max_executions_per_day == 5
+
+    def test_max_executions_zero_allowed(self, tmp_path):
+        path = self._with_field(tmp_path, "max_executions_per_day: 0")
+        cfg = load_metrics_config(path)
+        assert cfg.metrics[0].max_executions_per_day == 0
+
+    def test_max_executions_negative_raises(self, tmp_path):
+        path = self._with_field(tmp_path, "max_executions_per_day: -1")
+        with pytest.raises(ConfigError):
+            load_metrics_config(path)
+
+    def test_max_executions_absent_is_none(self, tmp_path):
+        path = write_yaml(tmp_path, "metrics.yaml", self.BASE)
+        cfg = load_metrics_config(path)
+        assert cfg.metrics[0].max_executions_per_day is None
+
+    # --- run_frequency ---
+
+    def test_run_frequency_integer(self, tmp_path):
+        path = self._with_field(tmp_path, "run_frequency: 5")
+        cfg = load_metrics_config(path)
+        assert cfg.metrics[0].run_frequency == 5
+
+    def test_run_frequency_zero_allowed(self, tmp_path):
+        path = self._with_field(tmp_path, "run_frequency: 0")
+        cfg = load_metrics_config(path)
+        assert cfg.metrics[0].run_frequency == 0
+
+    def test_run_frequency_even(self, tmp_path):
+        path = self._with_field(tmp_path, 'run_frequency: "even"')
+        cfg = load_metrics_config(path)
+        assert cfg.metrics[0].run_frequency == "even"
+
+    def test_run_frequency_odd(self, tmp_path):
+        path = self._with_field(tmp_path, 'run_frequency: "odd"')
+        cfg = load_metrics_config(path)
+        assert cfg.metrics[0].run_frequency == "odd"
+
+    def test_run_frequency_invalid_string_raises(self, tmp_path):
+        path = self._with_field(tmp_path, 'run_frequency: "weekly"')
+        with pytest.raises(ConfigError):
+            load_metrics_config(path)
+
+    def test_run_frequency_negative_raises(self, tmp_path):
+        path = self._with_field(tmp_path, "run_frequency: -3")
+        with pytest.raises(ConfigError):
+            load_metrics_config(path)
+
+    def test_run_frequency_absent_is_none(self, tmp_path):
+        path = write_yaml(tmp_path, "metrics.yaml", self.BASE)
+        cfg = load_metrics_config(path)
+        assert cfg.metrics[0].run_frequency is None
+
+    def test_all_four_schedule_fields_together(self, tmp_path):
+        content = (
+            self.BASE.rstrip()
+            + "\n    time_window_from: \"0800\""
+            + "\n    time_window_till: \"2000\""
+            + "\n    max_executions_per_day: 10"
+            + "\n    run_frequency: 2\n"
+        )
+        path = write_yaml(tmp_path, "metrics.yaml", content)
+        cfg = load_metrics_config(path)
+        m = cfg.metrics[0]
+        assert m.time_window_from == "0800"
+        assert m.time_window_till == "2000"
+        assert m.max_executions_per_day == 10
+        assert m.run_frequency == 2

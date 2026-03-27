@@ -110,6 +110,36 @@
 #                              Example: proc_root: "/host/proc"
 #
 # -----------------------------------------------------------------------------
+# SCHEDULING FIELDS (optional — per metric)
+# -----------------------------------------------------------------------------
+# All four fields are optional. Omit or set to null/0 to disable.
+#
+#   time_window_from string    Quoted "HHMM" or bare integer (e.g. "0800" or 800).
+#                              Start of the allowed daily execution window
+#                              (inclusive). Must be paired with time_window_till.
+#                              Hours 00-23, minutes 00-59.
+#                              If from > till the window wraps past midnight
+#                              (e.g. "2200"–"0600" = night window).
+#
+#   time_window_till string    Quoted "HHMM" or bare integer (e.g. "1800").
+#                              End of the allowed daily execution window
+#                              (inclusive). Must be paired with time_window_from.
+#
+#   max_executions_per_day integer  >= 0
+#                              Maximum collections per calendar day (local time
+#                              of the host). 0 or absent = no limit.
+#                              State is tracked in state/schedule.json.
+#
+#   run_frequency  integer | string   >= 0 | "even" | "odd"
+#                              Controls which global collection cycles include
+#                              this metric.
+#                              0 or absent  — every cycle (no restriction).
+#                              N (int >= 2) — every Nth cycle only
+#                                             (1st, (N+1)th, (2N+1)th, …).
+#                              "even"       — even-numbered cycles (2, 4, 6, …).
+#                              "odd"        — odd-numbered cycles (1, 3, 5, …).
+#
+# -----------------------------------------------------------------------------
 # DEFAULTS — max_response_bytes
 # -----------------------------------------------------------------------------
 #   max_response_bytes integer  Maximum bytes read from an HTTP response body

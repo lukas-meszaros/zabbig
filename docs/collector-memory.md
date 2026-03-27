@@ -125,3 +125,25 @@ All metrics support the optional top-level `host_name` field. When set, the metr
 ```
 
 See [configuration.md](configuration.md#metric-level-host_name) for the full priority chain.
+
+---
+
+## Metric Scheduling
+
+Every memory metric supports four optional scheduling fields that control when and how often the metric is collected. All four are inactive when absent.
+
+```yaml
+- id: mem_used_biz
+  collector: memory
+  key: host.memory.used_percent.biz
+  value_type: float
+  unit: "%"
+  time_window_from: "0800"         # only collect from 08:00
+  time_window_till: "1800"         # stop collecting at 18:00
+  max_executions_per_day: 24       # no more than 24 times per day
+  run_frequency: "even"            # even-numbered invocations only
+  params:
+    mode: used_percent
+```
+
+See [configuration.md](configuration.md#metric-scheduling-fields) for the full field reference, value rules, and evaluation order.

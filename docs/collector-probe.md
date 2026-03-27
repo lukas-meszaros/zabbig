@@ -331,3 +331,26 @@ The `match: '"status"'` guard skips lines that don't mention `status`. The
 `conditions` list maps the JSON field value to a severity integer. `result: max`
 ensures the worst severity is reported when the body contains multiple status
 references.
+
+---
+
+## Metric Scheduling
+
+Every probe metric supports four optional scheduling fields that control when and how often the metric is collected. All four are inactive when absent.
+
+```yaml
+- id: probe_api_health_biz
+  collector: probe
+  key: host.probe.api.health.biz
+  value_type: int
+  time_window_from: "0600"         # only probe during operational hours
+  time_window_till: "2300"
+  max_executions_per_day: 100
+  run_frequency: 3                 # every third invocation
+  params:
+    mode: tcp
+    host: "api.internal"
+    port: 443
+```
+
+See [configuration.md](configuration.md#metric-scheduling-fields) for the full field reference, value rules, and evaluation order.
