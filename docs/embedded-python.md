@@ -118,6 +118,8 @@ Then run the client as:
 ./start.sh --config client.yaml
 ```
 
+For the full list of `run.py` options and exit codes see [running-the-client.md](running-the-client.md).
+
 ---
 
 ## Cron Setup

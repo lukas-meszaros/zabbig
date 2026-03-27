@@ -54,6 +54,8 @@ docker exec zabbig-client python3 run.py --config client.docker.yaml
 docker exec -it zabbig-client bash
 ```
 
+For the full list of `run.py` options, exit codes, cron setup, and `start.sh` wrapper see [running-the-client.md](running-the-client.md).
+
 ---
 
 ## Running the Test Suite
