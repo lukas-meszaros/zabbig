@@ -1,16 +1,172 @@
-# Metric Fields Reference
+# metrics.yaml Reference
 
-Every entry under `metrics` in `metrics.yaml` shares a common set of fields regardless of which collector is used. This document is the single reference for all of them.
+`metrics.yaml` defines what the zabbig agent collects: one entry per metric, with the collector to use and any collector-specific parameters. This document is the single reference for all top-level keys, metric fields, scheduling options, and the shared condition engine.
 
-Collector-specific `params` are documented in the individual collector pages. For `client.yaml` settings and the `defaults` / `collector_defaults` blocks see [configuration.md](configuration.md).
+For `client.yaml` — runtime, connection, and logging settings — see [configuration-client.yaml.md](configuration-client.yaml.md).
 
 ---
 
-## Required Fields
+## Top-level structure
+
+```yaml
+version: 1
+
+# Optional: load additional metric files (profile.d style)
+include:
+  - "metrics.d/*.yaml"
+
+defaults:
+  # applied to every metric unless overridden at a more specific scope
+
+collector_defaults:
+  cpu:
+    # overrides for all cpu metrics
+  log:
+    timeout_seconds: 120
+
+metrics:
+  - id: cpu_util
+    # ...
+```
+
+### Resolution order
+
+When a field is set at multiple scopes, the most specific scope always wins:
+
+```
+metric field  >  collector_defaults.<name>  >  defaults
+```
+
+---
+
+## `version`
+
+Must be `1`. Any other value causes a config error at startup.
+
+```yaml
+version: 1
+```
+
+---
+
+## `include`
+
+Type: list of glob patterns (optional)
+
+Load additional metric files alongside `metrics.yaml`. Patterns are resolved relative to the directory containing `metrics.yaml` (or as absolute paths). This is equivalent to the "profile.d" pattern — a clean way to split a large metrics file into per-application or per-team files.
+
+```yaml
+include:
+  - "metrics.d/*.yaml"               # all .yaml files in the metrics.d/ sub-directory
+  - "metrics.d/databases/*.yaml"     # nested sub-directory
+  - "/etc/zabbig/metrics.d/*.yaml"   # absolute path
+```
+
+Patterns that match no files produce a warning rather than an error — safe to keep patterns in place before deployment.
+
+### What included files support
+
+| Key | Supported in included files |
+|---|---|
+| `metrics:` | ✓ merged into the global metrics list |
+| `defaults:` | ✓ scoped to the included file — does not bleed into the main file |
+| `version:` | ignored (version is checked only in the main file) |
+| `collector_defaults:` | ✗ not supported in included files |
+| `include:` | ✗ no recursive includes |
+
+### Duplicate detection
+
+Duplicate `id` values across any combination of included files and the main file are rejected at startup with a clear error message listing the conflicting ID and file paths.
+
+### Example layout
+
+```
+metrics.yaml          # main file — references metrics.d/
+metrics.d/
+  databases.yaml      # database collector metrics
+  webapps.yaml        # probe collector metrics for web applications
+```
+
+`metrics.yaml`:
+```yaml
+version: 1
+include:
+  - "metrics.d/*.yaml"
+defaults:
+  timeout_seconds: 10
+metrics:
+  - id: cpu_util
+    collector: cpu
+    key: host.cpu.util
+    params:
+      mode: percent
+```
+
+`metrics.d/databases.yaml`:
+```yaml
+defaults:
+  timeout_seconds: 30
+  delivery: batch
+metrics:
+  - id: pg_active_connections
+    collector: database
+    key: pg.connections.active
+    params:
+      database: prod_pg
+      sql: "SELECT count(*) FROM pg_stat_activity WHERE state = 'active'"
+```
+
+---
+
+## `defaults`
+
+Fields in `defaults` apply to every metric in the file unless overridden by `collector_defaults` or the metric entry itself. All [common metric fields](#common-optional-fields) are valid here.
+
+```yaml
+defaults:
+  timeout_seconds: 10
+  error_policy: skip
+  delivery: batch
+```
+
+---
+
+## `collector_defaults`
+
+Per-collector default overrides. The key is a collector name; the value is a map of field overrides that apply only to metrics using that collector.
+
+```yaml
+collector_defaults:
+  log:
+    timeout_seconds: 120
+    delivery: batch
+  probe:
+    timeout_seconds: 15
+    delivery: immediate
+```
+
+**Built-in collector defaults** (applied before `collector_defaults` and `defaults`):
+
+| Collector | `timeout_seconds` | `delivery` |
+|---|---|---|
+| `cpu` | 5 | batch |
+| `memory` | 5 | batch |
+| `disk` | 10 | batch |
+| `service` | 8 | immediate |
+| `network` | 10 | batch |
+| `log` | 60 | batch |
+| `probe` | 10 | immediate |
+| `database` | 30 | batch |
+
+---
+
+## Required fields
+
+Every metric entry must have these four fields.
 
 ### `id`
 
-Unique string identifier within the file. Used in log output and as the base name for log-collector state files (`state/log_<id>.json`). Duplicate IDs are rejected at startup.
+Unique string identifier within the loaded metrics (including all included files). Used in log output and as the base name for log collector state files (`state/log_<id>.json`). Duplicate IDs are rejected at startup.
 
 ```yaml
 id: cpu_util
@@ -40,19 +196,21 @@ Collector-specific parameters. See the individual collector documents for the fu
 
 ---
 
-## Common Optional Fields
+## Common optional fields
 
 | Field | Type | Default | Description |
 |---|---|---|---|
 | `enabled` | bool | `true` | When `false`, the metric is skipped entirely on every run. |
 | `delivery` | string | `batch` | `batch` or `immediate`. |
-| `timeout_seconds` | float | `10` | Per-collector timeout. Overridable per metric. |
+| `timeout_seconds` | float | collector default | Per-metric timeout. |
 | `error_policy` | string | `skip` | What to do when the collector fails or times out. |
 | `fallback_value` | string | — | Required when `error_policy: fallback`. |
 | `value_type` | string | — | `float` \| `int` \| `string`. Informational only. |
 | `unit` | string | — | Informational unit label (e.g. `%`, `B`, `ms`). Not sent to Zabbix. |
+| `host_name` | string | — | Send this metric under a different Zabbix host name. |
+| `cache_seconds` | int | — | Re-use last known value if still fresh; see [Scheduling fields](#scheduling-fields). |
 
-All of these can be set in the top-level `defaults` block or under `collector_defaults.<name>` to apply them to multiple metrics at once. A more specific scope always wins: `metric field > collector_defaults > defaults`.
+All of these can be set in the top-level `defaults` block or under `collector_defaults.<name>` to apply them to multiple metrics at once.
 
 ### `enabled`
 
@@ -71,11 +229,11 @@ All of these can be set in the top-level `defaults` block or under `collector_de
 
 Controls when the collected value is sent to Zabbix.
 
-- **`batch`** (default) — held until the batch collection window closes, then sent together with other batch metrics in one request. Lower overhead.
+- **`batch`** (default) — held until the batch collection window closes, then sent together with other batch metrics. Lower overhead.
 - **`immediate`** — sent as soon as the value is ready, before the batch window closes. Use for time-sensitive changes: service state, log alerts, probes.
 
 ```yaml
-delivery: immediate    # good for service and probe metrics
+delivery: immediate
 ```
 
 ### `timeout_seconds`
@@ -115,7 +273,7 @@ unit: "%"
 
 ---
 
-## Host Name Override
+## `host_name`
 
 ### Metric-level `host_name`
 
@@ -165,13 +323,13 @@ The `log` collector (in `condition` mode) and the `probe` collector (in `http_st
 
 ---
 
-## Scheduling Fields
+## Scheduling fields
 
-All four fields are optional. Omit them (or set to `null` / `0`) to disable scheduling constraints entirely. Together they control **when** and **how often** a metric is collected within the zabbig model of "cron schedules the agent, the agent decides which metrics to collect each run".
+All four fields are optional. Omit them (or set to `null` / `0`) to disable the constraint entirely. Together they control **when** and **how often** a metric is collected within the zabbig model of "cron schedules the agent, the agent decides which metrics to collect each run".
 
 > **Dry-run bypass:** `--dry-run` ignores all scheduling constraints and collects every enabled metric.
 
-### `time_window_from` and `time_window_till`
+### `time_window_from` / `time_window_till`
 
 Type: quoted `"HHMM"` string, 24-hour clock. Bare integers (e.g. `800`) are also accepted.
 
@@ -204,7 +362,7 @@ max_executions_per_day: 48    # at most every 30 min if running every minute
 
 ### `run_frequency`
 
-Type: integer ≥ 0 **or** the string `"even"` / `"odd"` (`0` or absent = no restriction)
+Type: integer ≥ 0 or `"even"` / `"odd"` (`0` or absent = every invocation)
 
 Controls on which zabbig invocations the metric runs, using a per-day run counter that starts at 1 and increments with each cron execution:
 
@@ -227,12 +385,12 @@ The run counter resets at the start of each new calendar day (stored in `state/s
 
 Type: integer ≥ 0 (absent or `0` = no caching — always collect)
 
-Skip collection and re-use the most recently known value if it is still fresh. The clock is wall-time since the previous successful collection.
+Skip collection and re-use the most recently known value if it is still fresh. The clock is wall-time since the previous successful collection. Requires `state.enabled: true` in `client.yaml`.
 
 Useful for:
-- Expensive queries (database collector, large log scans)
+- Expensive database queries or large log scans
 - Metrics that change on the scale of minutes or hours (inode totals, system uptime)
-- Reducing load on external systems when metrics are polled faster than they need to be
+- Reducing load on external systems polled faster than they need to be
 
 ```yaml
 - id: disk_root_inodes_total
@@ -252,11 +410,11 @@ Useful for:
     sql: "SELECT count(*) FROM pg_stat_activity WHERE state = 'active'"
 ```
 
-> **Note:** The cached value is stored in the run-state system (requires `state.enabled: true` in `client.yaml`). When state is disabled or no previous value exists, the metric always collects normally.
+> When state is disabled or no previous value has been recorded yet, the metric always collects normally regardless of `cache_seconds`.
 
 ### Constraint evaluation order
 
-When multiple scheduling fields are set, constraints are tested in this order: **time window → daily quota → run frequency**. The first failing constraint skips the metric; the remaining constraints are not evaluated for that run.
+Constraints are tested in this order: **time window → daily quota → run frequency → cache**. The first failing constraint skips the metric; the remaining constraints are not evaluated for that run.
 
 ### Full scheduling example
 
@@ -276,7 +434,7 @@ When multiple scheduling fields are set, constraints are tested in this order: *
 
 ---
 
-## Condition Engine
+## Condition engine
 
 Used by:
 - **`log` collector** — `condition` mode: conditions evaluated against log file lines
@@ -284,7 +442,7 @@ Used by:
 
 Conditions are listed under `params.conditions`. They are evaluated **in order**; the first matching entry wins for each line (or status code).
 
-### Condition Entry Forms
+### Condition entry forms
 
 #### Form 1 — fixed value on regex match
 
@@ -316,9 +474,9 @@ No `when` or `extract` — matches any line (or status code) that passed `match`
 
 > `when` and `extract` are mutually exclusive in the same entry.
 
-### `result` Strategies
+### `result` strategies
 
-Applies to `log` condition mode and `probe` http_body mode. Controls how multiple per-line values within a single scan window are reduced to a single scalar sent to Zabbix.
+Applies to `log` condition mode and `probe` `http_body` mode. Controls how multiple per-line values within a single scan window are reduced to a single scalar sent to Zabbix.
 
 | Strategy | Behaviour |
 |---|---|
@@ -330,3 +488,18 @@ Applies to `log` condition mode and `probe` http_body mode. Controls how multipl
 ```yaml
 result: max    # worst severity in the scan window wins
 ```
+
+---
+
+## `params` field
+
+Each collector has its own `params` block. See the individual collector documents:
+
+- [CPU collector](collector-cpu.md)
+- [Memory collector](collector-memory.md)
+- [Disk collector](collector-disk.md)
+- [Service collector](collector-service.md)
+- [Network collector](collector-network.md)
+- [Log collector](collector-log.md)
+- [Probe collector](collector-probe.md)
+- [Database collector](collector-database.md)

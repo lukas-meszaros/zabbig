@@ -61,7 +61,7 @@ Evaluates each row's value at `result_column` against the `conditions` list usin
 
 This is useful for alerting on threshold breaches where you want to map a raw numeric value to a severity code, or where you need to route a result to a different Zabbix host via `host_name`.
 
-See [metric-fields.md — Condition Engine](metric-fields.md#condition-engine) for the full condition syntax.
+See [configuration-metrics.yaml.md — Condition engine](configuration-metrics.yaml.md#condition-engine) for the full condition syntax.
 
 ---
 

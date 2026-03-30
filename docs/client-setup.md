@@ -75,7 +75,7 @@ Two config variants are provided:
 | `client.docker.yaml` | Runs **inside** the container — uses Docker DNS name `zabbix-server` |
 | `client.yaml` | Runs **directly on the host** — uses `127.0.0.1` |
 
-See [configuration.md](configuration.md) for a full reference of all config fields.
+See [configuration-client.yaml.md](configuration-client.yaml.md) for a full reference of all `client.yaml` fields, and [configuration-metrics.yaml.md](configuration-metrics.yaml.md) for `metrics.yaml`.
 
 ---
 

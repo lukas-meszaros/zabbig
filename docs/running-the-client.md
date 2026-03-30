@@ -26,8 +26,8 @@ python3 /path/to/zabbig_client/run.py
 
 | Option | Default | Description |
 |---|---|---|
-| `--config PATH` | `client.yaml` | Path to `client.yaml`. See [configuration.md](configuration.md). |
-| `--metrics PATH` | `metrics.yaml` | Path to `metrics.yaml`. See [metric-fields.md](metric-fields.md) and the collector docs. |
+| `--config PATH` | `client.yaml` | Path to `client.yaml`. See [configuration-client.yaml.md](configuration-client.yaml.md). |
+| `--metrics PATH` | `metrics.yaml` | Path to `metrics.yaml`. See [configuration-metrics.yaml.md](configuration-metrics.yaml.md) and the collector docs. |
 | `--dry-run` | off | Collect all metrics but do not connect to or send anything to Zabbix. Useful for testing new metric definitions. |
 | `--log-level LEVEL` | from `client.yaml` | Override `logging.level`. Choices: `DEBUG` `INFO` `WARNING` `ERROR`. |
 | `--validate` | off | Check `metrics.yaml` for structural and value errors without running any collectors or connecting to Zabbix. Does **not** require `--config`. |

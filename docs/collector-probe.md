@@ -139,7 +139,7 @@ This item requires a separate **Trapper** item in Zabbix with key
 
 ## Conditions Reference
 
-The condition engine for `http_status` and `http_body` modes is identical to the log collector (Forms 1–3, `result` strategies, per-condition `host_name`). See [metric-fields.md — Condition Engine](metric-fields.md#condition-engine) for the full syntax reference.
+The condition engine for `http_status` and `http_body` modes is identical to the log collector (Forms 1–3, `result` strategies, per-condition `host_name`). See [configuration-metrics.yaml.md — Condition engine](configuration-metrics.yaml.md#condition-engine) for the full syntax reference.
 
 > Sub-key items (`response_time_ms`, `ssl_check`) always use the metric-level `host_name` and are not affected by per-condition overrides.
 
@@ -261,4 +261,4 @@ references.
 
 ---
 
-For `host_name` override, scheduling fields (`time_window_from`, `time_window_till`, `max_executions_per_day`, `run_frequency`), and all other common metric fields see [metric-fields.md](metric-fields.md).
+For `host_name` override, scheduling fields (`time_window_from`, `time_window_till`, `max_executions_per_day`, `run_frequency`), and all other common metric fields see [configuration-metrics.yaml.md](configuration-metrics.yaml.md).

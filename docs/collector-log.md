@@ -58,7 +58,7 @@ Scans the **entire file** from byte 0 on every run and returns the total number 
 
 ## Condition Entry Forms
 
-Conditions support three forms: regex match, numeric extraction with comparison, and a catch-all. See [metric-fields.md — Condition Engine](metric-fields.md#condition-engine) for the full syntax reference and `result` strategy table.
+Conditions support three forms: regex match, numeric extraction with comparison, and a catch-all. See [configuration-metrics.yaml.md — Condition engine](configuration-metrics.yaml.md#condition-engine) for the full syntax reference and `result` strategy table.
 
 ---
 
@@ -270,4 +270,4 @@ Counts POST requests to a specific endpoint since the last run.
 
 ---
 
-For `host_name` override, scheduling fields (`time_window_from`, `time_window_till`, `max_executions_per_day`, `run_frequency`), and all other common metric fields see [metric-fields.md](metric-fields.md).
+For `host_name` override, scheduling fields (`time_window_from`, `time_window_till`, `max_executions_per_day`, `run_frequency`), and all other common metric fields see [configuration-metrics.yaml.md](configuration-metrics.yaml.md).

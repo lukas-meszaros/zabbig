@@ -28,7 +28,7 @@ No code changes are needed to add a metric for an existing collector. Edit `metr
     mode: used_percent
 ```
 
-> **Host name override:** The optional `host_name` field sends this metric to Zabbix under a different host than the global default. See [configuration.md — Metric-level `host_name`](configuration.md#metric-level-host_name) for details and the full priority chain.
+> **Host name override:** The optional `host_name` field sends this metric to Zabbix under a different host than the global default. See [configuration-metrics.yaml.md — `host_name`](configuration-metrics.yaml.md#host_name) for details and the full priority chain.
 
 ---
 
@@ -96,9 +96,9 @@ metrics:
 - File order within a glob is sorted alphabetically.
 - The `metrics.d/example.yaml` file shipped with the client is fully commented out and can be used as a starting template.
 
-> **Metric scheduling:** The four optional scheduling fields (`time_window_from`, `time_window_till`, `max_executions_per_day`, `run_frequency`) control when and how often a metric is collected. All are inactive when absent and are bypassed by `--dry-run`. See [configuration.md — Metric scheduling fields](configuration.md#metric-scheduling-fields) for the full reference.
+> **Metric scheduling:** The four optional scheduling fields (`time_window_from`, `time_window_till`, `max_executions_per_day`, `run_frequency`) control when and how often a metric is collected. All are inactive when absent and are bypassed by `--dry-run`. See [configuration-metrics.yaml.md — Scheduling fields](configuration-metrics.yaml.md#scheduling-fields) for the full reference.
 
-See [configuration.md](configuration.md) for all common fields, and the individual collector docs for the `params` each collector accepts:
+See [configuration-metrics.yaml.md](configuration-metrics.yaml.md) for all common fields, and the individual collector docs for the `params` each collector accepts:
 
 - [CPU](collector-cpu.md) — `mode`, `proc_root`
 - [Memory](collector-memory.md) — `mode`, `proc_root`

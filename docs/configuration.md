@@ -1,11 +1,22 @@
 # Configuration Reference
 
+> **This file has been split for easier navigation.**
+> 
+> | Document | Contents |
+> |---|---|
+> | [configuration-client.yaml.md](configuration-client.yaml.md) | `client.yaml` — server connection, timeouts, batching, logging, state, features |
+> | [configuration-metrics.yaml.md](configuration-metrics.yaml.md) | `metrics.yaml` — `include:`, `defaults`, `collector_defaults`, all metric fields, scheduling, `cache_seconds` |
+
+---
+
 Two YAML files control the client's behaviour:
 
 | File | Purpose |
 |---|---|
 | `client.yaml` | Runtime settings: server connection, timeouts, logging, state |
 | `metrics.yaml` | What to collect: one entry per metric, with collector and params |
+
+The sections below are kept for backward compatibility with existing links. For new work, use the dedicated documents above.
 
 ---
 
