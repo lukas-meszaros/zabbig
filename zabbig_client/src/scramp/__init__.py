@@ -1,5 +1,3 @@
-from importlib.metadata import version
-
 from scramp.core import (
     ScramClient,
     ScramException,
@@ -9,4 +7,8 @@ from scramp.core import (
 
 __all__ = ["ScramClient", "ScramException", "ScramMechanism", "make_channel_binding"]
 
-__version__ = version("scramp")
+try:
+    from importlib.metadata import version as _pkg_version
+    __version__ = _pkg_version("scramp")
+except Exception:
+    __version__ = "unknown"

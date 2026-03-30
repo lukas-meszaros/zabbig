@@ -9,12 +9,10 @@ version: 1
 
 databases:
 
-  # Uncomment and fill in your database connection details:
-  #
-  # - name: local_postgres
-  #   type: postgres
-  #   host: "127.0.0.1"
-  #   port: 5432
-  #   dbname: "myapp"
-  #   username: "monitor"
-  #   password: "ENC:REPLACE_WITH_ENCRYPT_OUTPUT"
+  - name: test_postgres
+    type: postgres
+    host: "zabbig_postgres_test"   # container name; reachable from other containers on the same Docker network
+    port: 5432
+    dbname: "testdb"
+    username: "monitor"
+    password: "monitor_pw"         # plain text — encrypt with scripts/encrypt_password.py when ready

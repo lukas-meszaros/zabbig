@@ -29,3 +29,9 @@ services:
       timeout: 5s
       retries: 10
       start_period: 10s
+    networks:
+      - zabbix-lab-net
+
+networks:
+  zabbix-lab-net:
+    external: true   # created by docker-compose.yml

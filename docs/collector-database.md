@@ -88,6 +88,8 @@ databases:
 
 **`password`** accepts either a plain-text string or an `ENC:…` token produced by `encrypt_password.py`. Plain-text passwords produce a startup warning. See [Encrypting Passwords](encrypt-passwords.md).
 
+**`secret.key`** is stored inside `zabbig_client/` alongside `databases.yaml`. Copying the `zabbig_client/` directory to another server brings both the config and the key, so encrypted passwords work on every host without extra steps.
+
 **`options`** is passed directly to the underlying driver as keyword arguments. For `pg8000` this includes flags such as `application_name` or `ssl_context`.
 
 ---

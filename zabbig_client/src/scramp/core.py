@@ -21,7 +21,10 @@ from stringprep import (
     in_table_d2,
 )
 
-from asn1crypto.x509 import Certificate
+# asn1crypto is only needed for TLS channel binding (tls-server-end-point).
+# Import lazily so the module loads without it when SSL channel binding is
+# not used (plain or SSL-without-channel-binding connections).
+_asn1_Certificate = None
 
 from scramp.utils import b64dec, b64enc, h, hmac, uenc, xor
 
@@ -92,8 +95,19 @@ def _make_cb_data(name, ssl_socket):
         return ssl_socket.get_channel_binding(name)
 
     elif name == "tls-server-end-point":
+        global _asn1_Certificate
+        if _asn1_Certificate is None:
+            try:
+                from asn1crypto.x509 import Certificate as _C
+                _asn1_Certificate = _C
+            except ImportError:
+                raise ImportError(
+                    "asn1crypto is required for tls-server-end-point channel "
+                    "binding but is not installed. Either vendor asn1crypto or "
+                    "use a connection without TLS channel binding."
+                )
         cert_bin = ssl_socket.getpeercert(binary_form=True)
-        cert = Certificate.load(cert_bin)
+        cert = _asn1_Certificate.load(cert_bin)
 
         # Find the hash algorithm to use according to
         # https://tools.ietf.org/html/rfc5929#section-4

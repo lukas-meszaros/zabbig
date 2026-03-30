@@ -723,7 +723,7 @@ metrics:
   # -------------------------------------------------------------------------
 
   - id: db_active_connections
-    enabled: false
+    enabled: true
     collector: database
     key: pg.connections.active
     value_type: int
@@ -737,7 +737,7 @@ metrics:
       mode: value
 
   - id: db_active_users
-    enabled: false
+    enabled: true
     collector: database
     key: db.active_users
     value_type: int
@@ -751,7 +751,7 @@ metrics:
       mode: value
 
   - id: db_error_alert
-    enabled: false
+    enabled: true
     collector: database
     key: db.error.level
     value_type: int

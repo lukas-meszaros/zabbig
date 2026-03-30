@@ -19,9 +19,11 @@ Token format: `ENC:<base64url(hmac[32] || iv[16] || ciphertext)>`
 The decryption key is a random 32-byte value stored as a base64url string. It is loaded from (in priority order):
 
 1. `ZABBIG_DB_KEY` environment variable
-2. `secret.key` file at the project root (alongside `run.py`)
+2. `secret.key` file inside `zabbig_client/` (alongside `databases.yaml`)
 
 A `secret.key` file is created automatically the first time you encrypt a password if neither source is available.
+
+Storing `secret.key` inside `zabbig_client/` means the key travels with the rest of the client files when you copy the directory to another server — all encrypted passwords in `databases.yaml` remain usable on every host without any extra setup.
 
 ---
 
@@ -95,16 +97,18 @@ The `--key-file` flag overrides the default path for all commands.
 
 ### Option A — `secret.key` file (default)
 
-`scripts/encrypt_password.py` and the client both look for `secret.key` at the project root. Restrict permissions:
+`scripts/encrypt_password.py` and the client both look for `secret.key` inside `zabbig_client/`. Restrict permissions:
 
 ```bash
-chmod 600 secret.key
+chmod 600 zabbig_client/secret.key
 ```
+
+Because `secret.key` lives inside `zabbig_client/`, copying that directory to another server (or syncing it with rsync/Ansible) automatically brings the key with it, so encrypted passwords work on every host without any extra steps.
 
 Add the file to `.gitignore` so it is never committed:
 
 ```
-secret.key
+zabbig_client/secret.key
 ```
 
 ### Option B — environment variable

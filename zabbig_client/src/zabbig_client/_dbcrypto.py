@@ -45,8 +45,8 @@ _IV_LEN = 16       # AES block size = IV length
 _KEY_LEN = 32      # AES-256 requires a 32-byte key
 _HMAC_LEN = 32     # HMAC-SHA256 output length
 
-# Default key file: secret.key alongside run.py (project root)
-_DEFAULT_KEY_FILE = os.path.join(_PROJECT_ROOT, "secret.key")
+# Default key file: secret.key inside zabbig_client/ (ships alongside the client)
+_DEFAULT_KEY_FILE = os.path.join(_CLIENT_ROOT, "secret.key")
 
 
 # ---------------------------------------------------------------------------
