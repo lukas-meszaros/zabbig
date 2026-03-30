@@ -90,7 +90,8 @@ docker exec zabbig-client python3 run.py --config client.docker.yaml
 | [docs/server-setup.md](docs/server-setup.md) | Zabbix server stack — start, stop, env vars, volumes |
 | [docs/client-setup.md](docs/client-setup.md) | Docker client container — build, run, networking |
 | [docs/provisioning.md](docs/provisioning.md) | `zabbix_update/` scripts — provisioning templates, items, triggers, dashboards |
-| [docs/configuration.md](docs/configuration.md) | client.yaml and metrics.yaml full reference |
+| [docs/configuration-client.yaml.md](docs/configuration-client.yaml.md) | `client.yaml` full reference — server connection, timeouts, batching, logging, state, features |
+| [docs/configuration-metrics.yaml.md](docs/configuration-metrics.yaml.md) | `metrics.yaml` full reference — `include:`, defaults, all metric fields, scheduling, condition engine |
 | [docs/collector-cpu.md](docs/collector-cpu.md) | CPU collector — modes and scenarios |
 | [docs/collector-memory.md](docs/collector-memory.md) | Memory collector — modes and scenarios |
 | [docs/collector-disk.md](docs/collector-disk.md) | Disk collector — modes and scenarios |

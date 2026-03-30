@@ -125,7 +125,8 @@ python3 run.py
 
 | Document | Contents |
 |----------|----------|
-| [configuration.md](../docs/configuration.md) | Full `client.yaml` and `metrics.yaml` reference |
+| [configuration-client.yaml.md](../docs/configuration-client.yaml.md) | Full `client.yaml` reference — server connection, timeouts, batching, logging, state, features |
+| [configuration-metrics.yaml.md](../docs/configuration-metrics.yaml.md) | Full `metrics.yaml` reference — `include:`, defaults, all metric fields, scheduling, condition engine |
 | [provisioning.md](../docs/provisioning.md) | `zabbix_update/` scripts — provisioning templates, items, triggers, dashboards |
 | [collector-cpu.md](../docs/collector-cpu.md) | CPU collector modes and scenarios |
 | [collector-memory.md](../docs/collector-memory.md) | Memory collector modes and scenarios |
