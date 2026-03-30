@@ -183,6 +183,71 @@ class TestLoadClientConfig:
         cfg = load_client_config(path)
         assert cfg.zabbix.server_hosts == ["proxy-a", "proxy-b", "proxy-c"]
 
+    def test_logging_file_plain_string(self, tmp_path):
+        path = write_yaml(tmp_path, "client.yaml", f"""
+            zabbix:
+              host_name: "h"
+            logging:
+              file: "/var/log/zabbig/client.log"
+        """)
+        cfg = load_client_config(path)
+        assert cfg.logging.file is not None
+        assert cfg.logging.file.path == "/var/log/zabbig/client.log"
+        assert cfg.logging.file.max_size_mb == 10
+        assert cfg.logging.file.max_backups == 5
+        assert cfg.logging.file.compress is True
+
+    def test_logging_file_mapping_full(self, tmp_path):
+        path = write_yaml(tmp_path, "client.yaml", """
+            zabbix:
+              host_name: "h"
+            logging:
+              file:
+                path: "/var/log/zabbig/client.log"
+                max_size_mb: 25
+                max_backups: 3
+                compress: false
+        """)
+        cfg = load_client_config(path)
+        fc = cfg.logging.file
+        assert fc.path == "/var/log/zabbig/client.log"
+        assert fc.max_size_mb == 25
+        assert fc.max_backups == 3
+        assert fc.compress is False
+
+    def test_logging_file_mapping_defaults(self, tmp_path):
+        path = write_yaml(tmp_path, "client.yaml", """
+            zabbix:
+              host_name: "h"
+            logging:
+              file:
+                path: "/var/log/zabbig/client.log"
+        """)
+        cfg = load_client_config(path)
+        fc = cfg.logging.file
+        assert fc.max_size_mb == 10
+        assert fc.max_backups == 5
+        assert fc.compress is True
+
+    def test_logging_file_mapping_missing_path_raises(self, tmp_path):
+        path = write_yaml(tmp_path, "client.yaml", """
+            zabbix:
+              host_name: "h"
+            logging:
+              file:
+                max_size_mb: 10
+        """)
+        with pytest.raises(ConfigError, match="logging.file.path"):
+            load_client_config(path)
+
+    def test_logging_file_none_when_absent(self, tmp_path):
+        path = write_yaml(tmp_path, "client.yaml", """
+            zabbix:
+              host_name: "h"
+        """)
+        cfg = load_client_config(path)
+        assert cfg.logging.file is None
+
 
 # ---------------------------------------------------------------------------
 # load_metrics_config

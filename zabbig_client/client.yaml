@@ -100,9 +100,16 @@ logging:
   # json is recommended for log aggregation systems (ELK, Loki, etc.)
   format: text
 
-  # Optional log file path. If set, logs are written here in addition to console.
-  # The file is rotated at 10 MB, keeping 5 backups.
-  # file: "/var/log/zabbig/client.log"
+  # Optional log file (rotation). If set, logs are written here in addition to
+  # the console. Accepts a plain path string (all defaults apply) or a mapping:
+  #
+  #   file: "/var/log/zabbig/client.log"     # plain string — all defaults
+  #
+  #   file:
+  #     path: "/var/log/zabbig/client.log"
+  #     max_size_mb: 10     # rotate when file reaches this size (default: 10 MB)
+  #     max_backups: 5      # keep this many rotated files (default: 5)
+  #     compress: true      # gzip-compress rotated backups (default: true)
 
   # Write logs to stderr (console). Set false to suppress console output in cron.
   console: true

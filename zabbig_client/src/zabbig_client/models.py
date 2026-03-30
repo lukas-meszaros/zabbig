@@ -66,10 +66,18 @@ class BatchingConfig:
 
 
 @dataclass
+class LogFileConfig:
+    path: str = ""
+    max_size_mb: int = 10
+    max_backups: int = 5
+    compress: bool = True
+
+
+@dataclass
 class LoggingConfig:
     level: str = "INFO"
     format: str = "text"
-    file: Optional[str] = None
+    file: Optional["LogFileConfig"] = None
     console: bool = True
 
 

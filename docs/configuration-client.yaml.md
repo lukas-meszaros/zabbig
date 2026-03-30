@@ -210,12 +210,32 @@ logging:
 
 ### `file`
 
-If set, logs are written to this file in addition to the console. Automatically rotated at 10 MB, keeping 5 compressed backups.
+If set, logs are written to this file in addition to the console (using `RotatingFileHandler`). Accepts either a plain path string or a mapping with rotation options.
+
+**Plain string** — uses all defaults:
 
 ```yaml
 logging:
   file: "/var/log/zabbig/client.log"
 ```
+
+**Mapping** — full control over rotation:
+
+```yaml
+logging:
+  file:
+    path: "/var/log/zabbig/client.log"  # required
+    max_size_mb: 10   # rotate when the file reaches this size (default: 10)
+    max_backups: 5    # number of rotated files to retain (default: 5)
+    compress: true    # gzip-compress rotated backups (default: true)
+```
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `path` | string | — | **Required.** Path to the log file. |
+| `max_size_mb` | int | `10` | File size in MB at which rotation is triggered. |
+| `max_backups` | int | `5` | Number of rotated backup files to keep. |
+| `compress` | bool | `true` | Gzip-compress each rotated backup. |
 
 ### `console`
 

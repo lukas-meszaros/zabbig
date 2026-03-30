@@ -20,6 +20,7 @@ from .models import (
     ClientConfig,
     CollectorDefaults,
     FeaturesConfig,
+    LogFileConfig,
     LoggingConfig,
     MetricDef,
     MetricsConfig,
@@ -57,6 +58,26 @@ def load_client_config(path: str) -> ClientConfig:
     def _resolve(p: str) -> str:
         """Return p as-is if absolute, otherwise resolve relative to config_dir."""
         return p if os.path.isabs(p) else os.path.join(config_dir, p)
+
+    def _parse_log_file(raw_file: Any) -> "LogFileConfig | None":
+        """Parse logging.file — accepts a plain string (path only) or a mapping."""
+        if not raw_file:
+            return None
+        if isinstance(raw_file, str):
+            return LogFileConfig(path=_resolve(raw_file))
+        if isinstance(raw_file, dict):
+            path = raw_file.get("path", "")
+            if not path:
+                raise ConfigError("logging.file.path is required when file is a mapping")
+            return LogFileConfig(
+                path=_resolve(str(path)),
+                max_size_mb=int(raw_file.get("max_size_mb", 10)),
+                max_backups=int(raw_file.get("max_backups", 5)),
+                compress=bool(raw_file.get("compress", True)),
+            )
+        raise ConfigError(
+            "logging.file must be a path string or a mapping with path/max_size_mb/max_backups/compress"
+        )
 
     z = raw.get("zabbix", {})
     raw_hosts = z.get("server_host", ["127.0.0.1"])
@@ -97,7 +118,7 @@ def load_client_config(path: str) -> ClientConfig:
     cfg.logging = LoggingConfig(
         level=str(lg.get("level", "INFO")).upper(),
         format=str(lg.get("format", "text")),
-        file=_resolve(str(lg["file"])) if lg.get("file") else None,
+        file=_parse_log_file(lg.get("file")),
         console=bool(lg.get("console", True)),
     )
 

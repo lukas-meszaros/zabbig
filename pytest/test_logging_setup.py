@@ -6,8 +6,8 @@ import logging
 
 import pytest
 
-from zabbig_client.logging_setup import setup_logging, _JsonFormatter
-from zabbig_client.models import LoggingConfig
+from zabbig_client.logging_setup import setup_logging, _JsonFormatter, _gz_rotator
+from zabbig_client.models import LogFileConfig, LoggingConfig
 
 
 class TestSetupLogging:
@@ -38,7 +38,8 @@ class TestSetupLogging:
 
     def test_file_handler_added(self, tmp_path):
         log_file = str(tmp_path / "test.log")
-        cfg = LoggingConfig(level="INFO", format="text", console=False, file=log_file)
+        cfg = LoggingConfig(level="INFO", format="text", console=False,
+                            file=LogFileConfig(path=log_file))
         setup_logging(cfg)
         root = logging.getLogger()
         assert len(root.handlers) == 1
@@ -46,10 +47,55 @@ class TestSetupLogging:
 
     def test_file_and_console(self, tmp_path):
         log_file = str(tmp_path / "test.log")
-        cfg = LoggingConfig(level="INFO", format="text", console=True, file=log_file)
+        cfg = LoggingConfig(level="INFO", format="text", console=True,
+                            file=LogFileConfig(path=log_file))
         setup_logging(cfg)
         root = logging.getLogger()
         assert len(root.handlers) == 2
+
+    def test_file_max_size_mb(self, tmp_path):
+        log_file = str(tmp_path / "test.log")
+        cfg = LoggingConfig(console=False, file=LogFileConfig(path=log_file, max_size_mb=25))
+        setup_logging(cfg)
+        handler = logging.getLogger().handlers[0]
+        assert handler.maxBytes == 25 * 1024 * 1024
+
+    def test_file_max_backups(self, tmp_path):
+        log_file = str(tmp_path / "test.log")
+        cfg = LoggingConfig(console=False, file=LogFileConfig(path=log_file, max_backups=3))
+        setup_logging(cfg)
+        handler = logging.getLogger().handlers[0]
+        assert handler.backupCount == 3
+
+    def test_file_compress_true_sets_namer_and_rotator(self, tmp_path):
+        log_file = str(tmp_path / "test.log")
+        cfg = LoggingConfig(console=False, file=LogFileConfig(path=log_file, compress=True))
+        setup_logging(cfg)
+        handler = logging.getLogger().handlers[0]
+        assert handler.namer is not None
+        assert handler.rotator is _gz_rotator
+        # namer appends .gz
+        assert handler.namer("test.log.1") == "test.log.1.gz"
+
+    def test_file_compress_false_leaves_namer_default(self, tmp_path):
+        log_file = str(tmp_path / "test.log")
+        cfg = LoggingConfig(console=False, file=LogFileConfig(path=log_file, compress=False))
+        setup_logging(cfg)
+        handler = logging.getLogger().handlers[0]
+        # RotatingFileHandler.namer defaults to None when not set
+        assert handler.namer is None
+        assert handler.rotator is None
+
+    def test_gz_rotator_compresses_and_removes_source(self, tmp_path):
+        import gzip
+        source = tmp_path / "app.log.1"
+        dest = tmp_path / "app.log.1.gz"
+        source.write_text("some log content")
+        _gz_rotator(str(source), str(dest))
+        assert not source.exists()
+        assert dest.exists()
+        with gzip.open(str(dest), "rt") as f:
+            assert f.read() == "some log content"
 
     def test_clears_existing_handlers(self):
         root = logging.getLogger()

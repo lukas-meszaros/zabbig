@@ -25,6 +25,7 @@ from zabbig_client.models import (
     ClientConfig,
     CollectorDefaults,
     FeaturesConfig,
+    LogFileConfig,
     LoggingConfig,
     MetricDef,
     MetricResult,
@@ -114,6 +115,21 @@ class TestBatchingConfig:
         assert cfg.batch_send_max_size == 250
         assert cfg.flush_immediate_separately is True
         assert cfg.immediate_micro_batch_window_ms == 200
+
+
+class TestLogFileConfig:
+    def test_defaults(self):
+        cfg = LogFileConfig(path="/var/log/test.log")
+        assert cfg.path == "/var/log/test.log"
+        assert cfg.max_size_mb == 10
+        assert cfg.max_backups == 5
+        assert cfg.compress is True
+
+    def test_custom_values(self):
+        cfg = LogFileConfig(path="/tmp/x.log", max_size_mb=50, max_backups=3, compress=False)
+        assert cfg.max_size_mb == 50
+        assert cfg.max_backups == 3
+        assert cfg.compress is False
 
 
 class TestLoggingConfig:
