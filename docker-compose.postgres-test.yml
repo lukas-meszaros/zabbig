@@ -1,0 +1,31 @@
+version: "3.8"
+
+# ---------------------------------------------------------------------------
+# Postgres test container for database collector integration tests.
+# ---------------------------------------------------------------------------
+# Usage:
+#   docker-compose -f docker-compose.postgres-test.yml up -d
+#   # Run integration tests:
+#   cd pytest && pytest -m integration
+#   # Tear down:
+#   docker-compose -f docker-compose.postgres-test.yml down -v
+
+services:
+  postgres-test:
+    image: postgres:15-alpine
+    container_name: zabbig_postgres_test
+    restart: "no"
+    environment:
+      POSTGRES_USER: monitor
+      POSTGRES_PASSWORD: monitor_pw
+      POSTGRES_DB: testdb
+    ports:
+      - "15432:5432"         # exposed on non-standard port to avoid conflicts
+    volumes:
+      - ./postgres-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U monitor -d testdb"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s

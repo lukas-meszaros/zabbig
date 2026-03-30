@@ -22,7 +22,7 @@ id: log_app_error
 
 Which built-in collector handles this metric.
 
-Valid values: `cpu` | `memory` | `disk` | `service` | `network` | `log` | `probe`
+Valid values: `cpu` | `memory` | `disk` | `service` | `network` | `log` | `probe` | `database`
 
 ### `key`
 

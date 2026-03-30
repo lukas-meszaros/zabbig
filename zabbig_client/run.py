@@ -53,6 +53,15 @@ def _parse_args() -> argparse.Namespace:
         help="Path to metrics.yaml (default: metrics.yaml alongside run.py)",
     )
     parser.add_argument(
+        "--databases",
+        default=os.path.join(os.path.dirname(os.path.abspath(__file__)), "databases.yaml"),
+        metavar="PATH",
+        help=(
+            "Path to databases.yaml (default: databases.yaml alongside run.py). "
+            "Optional: if the file does not exist, database metrics are not loaded."
+        ),
+    )
+    parser.add_argument(
         "--dry-run",
         action="store_true",
         default=False,
@@ -88,6 +97,7 @@ if __name__ == "__main__":
     exit_code = run(
         client_config_path=args.config,
         metrics_config_path=args.metrics,
+        databases_config_path=args.databases,
         dry_run=args.dry_run,
         log_level_override=args.log_level,
     )

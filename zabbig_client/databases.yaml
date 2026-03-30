@@ -1,0 +1,20 @@
+# databases.yaml — Database connection registry for the zabbig client.
+#
+# Passwords encrypted with: python3 scripts/encrypt_password.py "password"
+# Key stored in: ZABBIG_DB_KEY environment variable or secret.key file.
+#
+# See databases.yaml.example for a fully-commented reference.
+
+version: 1
+
+databases:
+
+  # Uncomment and fill in your database connection details:
+  #
+  # - name: local_postgres
+  #   type: postgres
+  #   host: "127.0.0.1"
+  #   port: 5432
+  #   dbname: "myapp"
+  #   username: "monitor"
+  #   password: "ENC:REPLACE_WITH_ENCRYPT_OUTPUT"

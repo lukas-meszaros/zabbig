@@ -1,0 +1,54 @@
+# databases.yaml.example — Database connection registry for the zabbig client.
+#
+# Copy this file to databases.yaml and fill in your connection details.
+# Passwords should be encrypted with scripts/encrypt_password.py:
+#
+#   python3 scripts/encrypt_password.py "yourpassword"
+#
+# The ENC: prefix tells the client to decrypt the value at runtime using
+# the key from ZABBIG_DB_KEY or secret.key.
+#
+# Reference this file with --databases at run time (or use the default path
+# databases.yaml alongside run.py).
+#
+# --------------------------------------------------------------------------- #
+
+version: 1
+
+databases:
+
+  # ---------------------------------------------------------------------------
+  # Minimal example — PostgreSQL with encrypted password
+  # ---------------------------------------------------------------------------
+  - name: local_postgres          # Referenced by metrics.yaml: params.database
+    type: postgres                # Only 'postgres' is supported in v1
+    host: "127.0.0.1"
+    port: 5432
+    dbname: "myapp"
+    username: "monitor"
+    password: "ENC:REPLACE_WITH_ENCRYPT_OUTPUT"
+    # connect_timeout: 10         # Optional; seconds (default: 10)
+    # options:                    # Optional driver-specific kwargs
+    #   ssl_context: null         # Pass a ssl.SSLContext for TLS connections
+
+  # ---------------------------------------------------------------------------
+  # Plain-text password (not recommended — use ENC: in production)
+  # ---------------------------------------------------------------------------
+  # - name: dev_postgres
+  #   type: postgres
+  #   host: "127.0.0.1"
+  #   port: 5432
+  #   dbname: "devdb"
+  #   username: "devuser"
+  #   password: "plaintext_password"   # WARNING: visible in config file
+
+  # ---------------------------------------------------------------------------
+  # Test container (matches docker-compose.postgres-test.yml)
+  # ---------------------------------------------------------------------------
+  # - name: test_postgres
+  #   type: postgres
+  #   host: "127.0.0.1"
+  #   port: 15432
+  #   dbname: "testdb"
+  #   username: "monitor"
+  #   password: "monitor_pw"

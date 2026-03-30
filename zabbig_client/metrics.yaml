@@ -716,3 +716,61 @@ metrics:
       conditions:
         - value: 1
           host_name: "prod-server-02"
+
+  # -------------------------------------------------------------------------
+  # Database collector examples (require databases.yaml with test_postgres)
+  # Start the test container: docker-compose -f docker-compose.postgres-test.yml up -d
+  # -------------------------------------------------------------------------
+
+  - id: db_active_connections
+    enabled: false
+    collector: database
+    key: pg.connections.active
+    value_type: int
+    unit: ""
+    delivery: batch
+    timeout_seconds: 10
+    error_policy: skip
+    params:
+      database: test_postgres
+      sql: "SELECT count(*) FROM pg_stat_activity WHERE state = 'active'"
+      mode: value
+
+  - id: db_active_users
+    enabled: false
+    collector: database
+    key: db.active_users
+    value_type: int
+    unit: ""
+    delivery: batch
+    timeout_seconds: 10
+    error_policy: skip
+    params:
+      database: test_postgres
+      sql: "SELECT value FROM metrics_test WHERE key = 'active_users'"
+      mode: value
+
+  - id: db_error_alert
+    enabled: false
+    collector: database
+    key: db.error.level
+    value_type: int
+    unit: ""
+    delivery: batch
+    timeout_seconds: 10
+    error_policy: skip
+    params:
+      database: test_postgres
+      sql: "SELECT value FROM metrics_test WHERE key = 'error_count'"
+      mode: condition
+      default_value: 0
+      conditions:
+        - extract: '(\d+)'
+          compare: gt
+          threshold: 10
+          value: 2
+        - extract: '(\d+)'
+          compare: gt
+          threshold: 0
+          value: 1
+        - value: 0

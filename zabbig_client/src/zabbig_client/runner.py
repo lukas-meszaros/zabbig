@@ -69,6 +69,9 @@ async def run_all_collectors(
                 metric = dataclasses.replace(
                     metric, params={**metric.params, "state_dir": state_dir}
                 )
+            # Inject db_registry for database collector (set by main.py).
+            # The registry is already in metric.params when it arrives here;
+            # nothing more to do — this comment documents the contract.
             collector_cls = get_collector(metric.collector)
             collector = collector_cls()
             t0 = time.monotonic()

@@ -429,6 +429,89 @@ def _validate_collector_params(metric_id: str, collector: str, params: dict, str
                         f"not in {valid_comparators}",
                         strict,
                     )
+    elif collector == "database":
+        if "database" not in params:
+            _config_error(
+                f"Metric '{metric_id}': database collector requires params.database "
+                "(name of an entry in databases.yaml)",
+                strict,
+            )
+        if "sql" not in params:
+            _config_error(
+                f"Metric '{metric_id}': database collector requires params.sql",
+                strict,
+            )
+        mode = params.get("mode", "value")
+        valid_modes = {"value", "condition"}
+        if mode not in valid_modes:
+            _config_error(
+                f"Metric '{metric_id}': database collector params.mode='{mode}' "
+                f"not in {valid_modes}",
+                strict,
+            )
+        result = params.get("result", "last")
+        valid_results = {"first", "last", "max", "min"}
+        if result not in valid_results:
+            _config_error(
+                f"Metric '{metric_id}': database collector params.result='{result}' "
+                f"not in {valid_results}",
+                strict,
+            )
+        result_column = params.get("result_column", 0)
+        try:
+            col = int(result_column)
+            if col < 0:
+                raise ValueError
+        except (TypeError, ValueError):
+            _config_error(
+                f"Metric '{metric_id}': database collector params.result_column must "
+                f"be a non-negative integer, got {result_column!r}",
+                strict,
+            )
+        if mode == "condition":
+            conditions = params.get("conditions", [])
+            if not isinstance(conditions, list):
+                _config_error(
+                    f"Metric '{metric_id}': database collector params.conditions must be a list",
+                    strict,
+                )
+                conditions = []
+            valid_comparators = {"gt", "lt", "gte", "lte", "eq"}
+            for i, cond in enumerate(conditions):
+                if not isinstance(cond, dict):
+                    _config_error(
+                        f"Metric '{metric_id}': database conditions[{i}] must be a mapping",
+                        strict,
+                    )
+                    continue
+                has_when = "when" in cond
+                has_extract = "extract" in cond
+                if has_when and has_extract:
+                    _config_error(
+                        f"Metric '{metric_id}': database conditions[{i}] cannot have "
+                        "both 'when' and 'extract'",
+                        strict,
+                    )
+                if has_extract:
+                    if "compare" not in cond:
+                        _config_error(
+                            f"Metric '{metric_id}': database conditions[{i}] with "
+                            "'extract' requires 'compare'",
+                            strict,
+                        )
+                    if "threshold" not in cond:
+                        _config_error(
+                            f"Metric '{metric_id}': database conditions[{i}] with "
+                            "'extract' requires 'threshold'",
+                            strict,
+                        )
+                    compare = cond.get("compare", "")
+                    if compare not in valid_comparators:
+                        _config_error(
+                            f"Metric '{metric_id}': database conditions[{i}] "
+                            f"compare='{compare}' not in {valid_comparators}",
+                            strict,
+                        )
 
 
 def _parse_hhmm_field(raw: dict, metric_id: str, field_name: str, strict: bool) -> "str | None":
