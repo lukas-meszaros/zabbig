@@ -454,8 +454,49 @@
 #                          params if needed.
 #
 # =============================================================================
+# CACHE_SECONDS  (optional — per metric)
+# =============================================================================
+#   cache_seconds  integer  >= 0
+#                           When set on a metric, the collector skips collection
+#                           and re-uses the most recently known value if the
+#                           previous collection finished less than cache_seconds
+#                           seconds ago.
+#                           0 or absent = always collect (no caching).
+#                           Useful for expensive or slow collectors (e.g.
+#                           database queries, inodes_total) that do not need
+#                           per-run freshness.
+#                           Example: cache_seconds: 300  # only re-collect every 5 minutes
+#
+# =============================================================================
+# INCLUDE DIRECTIVE  (optional — top level)
+# =============================================================================
+#   include  list of glob patterns
+#             Split your metrics across multiple files (profile.d style).
+#             Each glob is resolved relative to the directory of this file
+#             (absolute paths are also accepted).
+#             Matched files are loaded in sorted order.
+#
+#             Supported in included files:
+#               metrics:   — list of metric entries
+#               defaults:  — scoped defaults applied only within that file
+#
+#             NOT supported in included files (use main file only):
+#               collector_defaults, include (no recursive includes)
+#
+#             Non-matching patterns generate a warning but are not errors.
+#             Duplicate metric ids or keys across files are a validation error.
+#
+#             Example:
+#               include:
+#                 - metrics.d/*.yaml
+#
+# =============================================================================
 
 version: 1
+
+# Uncomment to split metrics across multiple files:
+# include:
+#   - metrics.d/*.yaml
 
 # ---------------------------------------------------------------------------
 # Global defaults — applied to every metric unless overridden at a lower level
@@ -694,6 +735,7 @@ metrics:
     delivery: batch
     timeout_seconds: 10
     error_policy: skip
+    cache_seconds: 300    # inode totals rarely change; skip re-collection for 5 minutes
     params:
       mount: "/"
       mode: inodes_total

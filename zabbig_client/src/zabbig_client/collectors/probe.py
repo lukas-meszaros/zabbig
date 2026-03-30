@@ -62,6 +62,11 @@ import asyncio
 
 _DEFAULT_MAX_RESPONSE_BYTES = 65536
 
+# Module-level HTTP session cache, keyed by (scheme, host, port).
+# Sessions are created on first use and reused within the same process run,
+# enabling TCP keep-alive and connection pooling across multiple probe metrics.
+_http_sessions: dict[tuple, requests.Session] = {}
+
 
 @register_collector("probe")
 class ProbeCollector(BaseCollector):
@@ -188,9 +193,13 @@ def _run_http_probe(metric: MetricDef) -> list[MetricResult]:
     connect_ok = False
     t0 = time.monotonic()
     try:
+        session_key = (parsed.scheme, ssl_host, ssl_port)
+        if session_key not in _http_sessions:
+            _http_sessions[session_key] = requests.Session()
+        session = _http_sessions[session_key]
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", InsecureRequestWarning)
-            resp = requests.request(
+            resp = session.request(
                 method,
                 url,
                 headers=headers,

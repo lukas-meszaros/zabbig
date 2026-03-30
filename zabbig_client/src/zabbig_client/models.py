@@ -60,6 +60,7 @@ class RuntimeConfig:
 class BatchingConfig:
     batch_collection_window_seconds: float = 60.0
     batch_send_max_size: int = 250
+    batch_chunk_size: int = 250
     flush_immediate_separately: bool = True
     immediate_micro_batch_window_ms: int = 200
 
@@ -118,6 +119,7 @@ class MetricDef:
     tags: list = field(default_factory=list)
     params: dict = field(default_factory=dict)
     host_name: Optional[str] = None
+    cache_seconds: Optional[int] = None             # skip collection if a cached value is still fresh
     # --- Schedule constraints (all optional; None / 0 = no restriction) ---
     time_window_from: Optional[str] = None          # "HHMM" — active from this time until midnight
     time_window_till: Optional[str] = None          # "HHMM" — active from midnight until this time
@@ -137,6 +139,7 @@ class MetricsConfig:
     defaults: dict = field(default_factory=dict)
     collector_defaults: dict = field(default_factory=dict)
     metrics: list = field(default_factory=list)  # List[MetricDef]
+    include: list = field(default_factory=list)  # Glob patterns for included metrics files
 
 
 # ---------------------------------------------------------------------------

@@ -15,8 +15,17 @@ from zabbig_client.collectors.probe import (
     _ssl_cert_check,
     _eval_http_status,
     _eval_http_body,
+    _http_sessions,
 )
 from zabbig_client.models import RESULT_OK, RESULT_FAILED
+
+
+@pytest.fixture(autouse=True)
+def clear_http_sessions():
+    """Reset the HTTP session cache before each test to prevent cross-test bleed."""
+    _http_sessions.clear()
+    yield
+    _http_sessions.clear()
 
 
 # ---------------------------------------------------------------------------
@@ -240,14 +249,14 @@ def _make_fake_response(status_code=200, body=b"Hello World"):
 class TestRunHttpProbe:
     def test_http_status_no_conditions_returns_code(self):
         resp = _make_fake_response(200)
-        with patch("requests.request", return_value=resp):
+        with patch("requests.Session.request", return_value=resp):
             metric = _http_metric(mode="http_status")
             results = _run_http_probe(metric)
         assert results[0].value == "200"
 
     def test_http_status_with_condition_match(self):
         resp = _make_fake_response(200)
-        with patch("requests.request", return_value=resp):
+        with patch("requests.Session.request", return_value=resp):
             metric = _http_metric(
                 mode="http_status",
                 conditions=[{"when": "200", "value": 1}, {"value": 0}],
@@ -257,7 +266,7 @@ class TestRunHttpProbe:
 
     def test_http_status_404_with_condition(self):
         resp = _make_fake_response(404)
-        with patch("requests.request", return_value=resp):
+        with patch("requests.Session.request", return_value=resp):
             metric = _http_metric(
                 mode="http_status",
                 conditions=[{"when": "200", "value": 1}, {"value": 0}],
@@ -266,14 +275,14 @@ class TestRunHttpProbe:
         assert results[0].value == "0"
 
     def test_connect_failure_returns_default(self):
-        with patch("requests.request", side_effect=Exception("connection refused")):
+        with patch("requests.Session.request", side_effect=Exception("connection refused")):
             metric = _http_metric(mode="http_status", default_value=99)
             results = _run_http_probe(metric)
         assert results[0].value == "99"
 
     def test_http_body_match(self):
         resp = _make_fake_response(200, body=b"status: ok\n")
-        with patch("requests.request", return_value=resp):
+        with patch("requests.Session.request", return_value=resp):
             metric = _http_metric(
                 mode="http_body",
                 match=r"status",
@@ -285,7 +294,7 @@ class TestRunHttpProbe:
 
     def test_http_body_no_match_returns_default(self):
         resp = _make_fake_response(200, body=b"status: degraded\n")
-        with patch("requests.request", return_value=resp):
+        with patch("requests.Session.request", return_value=resp):
             metric = _http_metric(
                 mode="http_body",
                 match=r"nonexistent_pattern",
@@ -297,7 +306,7 @@ class TestRunHttpProbe:
 
     def test_response_time_sub_key(self):
         resp = _make_fake_response(200)
-        with patch("requests.request", return_value=resp):
+        with patch("requests.Session.request", return_value=resp):
             metric = _http_metric(mode="http_status", response_time_ms=True)
             results = _run_http_probe(metric)
         assert len(results) == 2
@@ -306,7 +315,7 @@ class TestRunHttpProbe:
 
     def test_ssl_check_sub_key_added(self):
         resp = _make_fake_response(200)
-        with patch("requests.request", return_value=resp), \
+        with patch("requests.Session.request", return_value=resp), \
              patch("zabbig_client.collectors.probe._ssl_cert_check", return_value=1):
             metric = _http_metric(mode="http_status", ssl_check=True)
             results = _run_http_probe(metric)
@@ -315,7 +324,7 @@ class TestRunHttpProbe:
 
     def test_ssl_check_invalid_cert_returns_0(self):
         resp = _make_fake_response(200)
-        with patch("requests.request", return_value=resp), \
+        with patch("requests.Session.request", return_value=resp), \
              patch("zabbig_client.collectors.probe._ssl_cert_check", return_value=0):
             metric = _http_metric(mode="http_status", ssl_check=True)
             results = _run_http_probe(metric)
@@ -324,7 +333,7 @@ class TestRunHttpProbe:
 
     def test_condition_host_name_on_primary_result(self):
         resp = _make_fake_response(200)
-        with patch("requests.request", return_value=resp):
+        with patch("requests.Session.request", return_value=resp):
             metric = _http_metric(
                 mode="http_status",
                 conditions=[{"when": "200", "value": 1, "host_name": "web-ok"}, {"value": 0}],
@@ -334,7 +343,7 @@ class TestRunHttpProbe:
 
     def test_metric_host_name_used_when_no_condition_override(self):
         resp = _make_fake_response(200)
-        with patch("requests.request", return_value=resp):
+        with patch("requests.Session.request", return_value=resp):
             metric = make_metric(
                 collector="probe",
                 key="host.probe.http",
@@ -346,7 +355,7 @@ class TestRunHttpProbe:
 
     def test_sub_key_uses_metric_host_name_not_condition(self):
         resp = _make_fake_response(200)
-        with patch("requests.request", return_value=resp):
+        with patch("requests.Session.request", return_value=resp):
             metric = make_metric(
                 collector="probe",
                 key="host.probe.http",
@@ -365,7 +374,7 @@ class TestRunHttpProbe:
 
     def test_http_body_condition_host_name_on_result(self):
         resp = _make_fake_response(200, body=b"status: ok\n")
-        with patch("requests.request", return_value=resp):
+        with patch("requests.Session.request", return_value=resp):
             metric = _http_metric(
                 mode="http_body",
                 match=r"status: (\w+)",
@@ -425,7 +434,7 @@ class TestProbeCollector:
 
     async def test_http_status_returns_list(self):
         resp = _make_fake_response(200)
-        with patch("requests.request", return_value=resp):
+        with patch("requests.Session.request", return_value=resp):
             metric = _http_metric(mode="http_status")
             results = await ProbeCollector().collect(metric)
         assert isinstance(results, list)
@@ -448,7 +457,7 @@ class TestProbeCollector:
 
     async def test_condition_host_name_propagated_to_result(self):
         resp = _make_fake_response(200)
-        with patch("requests.request", return_value=resp):
+        with patch("requests.Session.request", return_value=resp):
             metric = _http_metric(
                 mode="http_status",
                 conditions=[{"when": "200", "value": 1, "host_name": "cond-host"}, {"value": 0}],
@@ -458,7 +467,7 @@ class TestProbeCollector:
 
     async def test_metric_host_name_propagated_to_result(self):
         resp = _make_fake_response(200)
-        with patch("requests.request", return_value=resp):
+        with patch("requests.Session.request", return_value=resp):
             metric = make_metric(
                 collector="probe",
                 key="host.probe.http",
@@ -470,7 +479,7 @@ class TestProbeCollector:
 
     async def test_no_host_name_override_result_is_none(self):
         resp = _make_fake_response(200)
-        with patch("requests.request", return_value=resp):
+        with patch("requests.Session.request", return_value=resp):
             metric = _http_metric(mode="http_status")
             results = await ProbeCollector().collect(metric)
         assert results[0].host_name is None

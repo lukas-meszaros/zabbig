@@ -223,6 +223,37 @@ run_frequency: "even"   # even-numbered invocations only
 
 The run counter resets at the start of each new calendar day (stored in `state/schedule.json`).
 
+### `cache_seconds`
+
+Type: integer ≥ 0 (absent or `0` = no caching — always collect)
+
+Skip collection and re-use the most recently known value if it is still fresh. The clock is wall-time since the previous successful collection.
+
+Useful for:
+- Expensive queries (database collector, large log scans)
+- Metrics that change on the scale of minutes or hours (inode totals, system uptime)
+- Reducing load on external systems when metrics are polled faster than they need to be
+
+```yaml
+- id: disk_root_inodes_total
+  collector: disk
+  key: host.disk.root.inodes_total
+  cache_seconds: 300          # only re-collect every 5 minutes
+  params:
+    mount: "/"
+    mode: inodes_total
+
+- id: db_active_connections
+  collector: database
+  key: pg.connections.active
+  cache_seconds: 60           # refresh at most once per minute
+  params:
+    database: prod_pg
+    sql: "SELECT count(*) FROM pg_stat_activity WHERE state = 'active'"
+```
+
+> **Note:** The cached value is stored in the run-state system (requires `state.enabled: true` in `client.yaml`). When state is disabled or no previous value exists, the metric always collects normally.
+
 ### Constraint evaluation order
 
 When multiple scheduling fields are set, constraints are tested in this order: **time window → daily quota → run frequency**. The first failing constraint skips the metric; the remaining constraints are not evaluated for that run.

@@ -22,12 +22,79 @@ No code changes are needed to add a metric for an existing collector. Edit `metr
   # time_window_till: "2200"        # optional: stop collecting at 22:00
   # max_executions_per_day: 10      # optional: cap daily execution count
   # run_frequency: 2                # optional: every 2nd invocation (or "even"/"odd")
+  # cache_seconds: 300              # optional: skip re-collection if value is < 5 min old
   params:
     mount: "/backup"
     mode: used_percent
 ```
 
 > **Host name override:** The optional `host_name` field sends this metric to Zabbix under a different host than the global default. See [configuration.md — Metric-level `host_name`](configuration.md#metric-level-host_name) for details and the full priority chain.
+
+---
+
+## Splitting Metrics Across Multiple Files
+
+For large deployments it is useful to split metrics into separate files organised by service or team — similar to `conf.d` / `profile.d` conventions.
+
+Add an `include:` key at the top level of `metrics.yaml`:
+
+```yaml
+version: 1
+
+include:
+  - metrics.d/*.yaml           # loads all .yaml files in metrics.d/ (sorted)
+  - /etc/zabbig/extras/*.yaml  # absolute paths are also accepted
+
+defaults:
+  delivery: batch
+  timeout_seconds: 10
+
+metrics:
+  # Base metrics defined here ...
+```
+
+### Included file format
+
+Included files support:
+
+| Key | Supported |
+|---|---|
+| `metrics:` | ✓ Full metric list, same syntax |
+| `defaults:` | ✓ Scoped to this file only — override main file's `defaults` |
+| `collector_defaults:` | ✗ Define in main file only |
+| `include:` | ✗ No recursive includes |
+
+Example `metrics.d/postgres.yaml`:
+
+```yaml
+defaults:
+  timeout_seconds: 15       # override global timeout for all metrics in this file
+
+metrics:
+  - id: pg_connections
+    collector: database
+    key: pg.connections.active
+    value_type: int
+    params:
+      database: prod_pg
+      sql: "SELECT count(*) FROM pg_stat_activity WHERE state = 'active'"
+
+  - id: pg_replication_lag
+    collector: database
+    key: pg.replication.lag_seconds
+    value_type: float
+    cache_seconds: 30
+    params:
+      database: prod_pg
+      sql: "SELECT EXTRACT(epoch FROM now() - pg_last_xact_replay_timestamp())"
+```
+
+### Rules
+
+- Non-matching patterns warn but do not abort the run.
+- Duplicate `id` or Zabbix `key` across any files is a validation error when `strict_config_validation: true` (the default).
+- File order within a glob is sorted alphabetically.
+- The `metrics.d/example.yaml` file shipped with the client is fully commented out and can be used as a starting template.
 
 > **Metric scheduling:** The four optional scheduling fields (`time_window_from`, `time_window_till`, `max_executions_per_day`, `run_frequency`) control when and how often a metric is collected. All are inactive when absent and are bypassed by `--dry-run`. See [configuration.md — Metric scheduling fields](configuration.md#metric-scheduling-fields) for the full reference.
 

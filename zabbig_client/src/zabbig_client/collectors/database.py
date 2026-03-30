@@ -112,11 +112,27 @@ def _run_query(metric: MetricDef) -> list[MetricResult]:
 
     from ..db_loader import get_connection  # local import avoids circular deps
 
-    conn = get_connection(db_config)
+    # Per-run connection cache: reuse an open connection if one already exists.
+    # The cache is a mutable dict injected by main.py alongside _db_registry.
+    # Dict get/set is safe here because the GIL protects individual operations
+    # and each db_name maps to one connection used by a single query at a time.
+    conn_cache = params.get("_db_conn_cache")
+    if conn_cache is None:
+        conn_cache = {}
+    if db_name in conn_cache:
+        conn = conn_cache[db_name]
+    else:
+        conn = get_connection(db_config)
+        conn_cache[db_name] = conn
+
     try:
         rows = _execute_query(conn, sql)
-    finally:
+    except Exception:
+        # On query error, remove the cached connection so the next metric gets
+        # a fresh one rather than retrying on a broken connection.
+        conn_cache.pop(db_name, None)
         _close_connection(conn)
+        raise
 
     if mode == "value":
         return _handle_value_mode(metric, rows, result_column, result_strategy, default_value)

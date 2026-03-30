@@ -1,0 +1,55 @@
+# metrics.d/example.yaml
+#
+# Example included metrics file — loaded when metrics.yaml contains:
+#
+#   include:
+#     - metrics.d/*.yaml
+#
+# Supported top-level keys:
+#   defaults  — scoped overrides applied only within this file
+#   metrics   — list of metric entries (same format as the main metrics.yaml)
+#
+# NOT supported:
+#   collector_defaults  (define those in the main metrics.yaml)
+#   include             (no recursive includes)
+
+# Optional: file-scoped defaults.  These override the main file's `defaults`
+# only for metrics in this file.  The main file's collector_defaults still apply.
+defaults:
+  delivery: batch
+  timeout_seconds: 10
+  error_policy: skip
+
+metrics:
+
+  # --- Example: a custom application metric read from a database ---
+  # Uncomment and adapt when you have real databases configured.
+
+  # - id: app_custom_queue_depth
+  #   name: "Application queue depth"
+  #   collector: database
+  #   key: app.queue.depth
+  #   value_type: int
+  #   unit: ""
+  #   delivery: batch
+  #   params:
+  #     database: my_app_db
+  #     sql: "SELECT count(*) FROM job_queue WHERE status = 'pending'"
+  #     mode: value
+
+  # --- Example: an HTTP health check for an internal service ---
+  # Uncomment and adapt to point at a real endpoint.
+
+  # - id: internal_api_health
+  #   name: "Internal API health"
+  #   collector: probe
+  #   key: internal.api.health
+  #   value_type: int
+  #   delivery: immediate
+  #   params:
+  #     mode: http_status
+  #     url: "http://localhost:8080/health"
+  #     conditions:
+  #       - when: "^200$"
+  #         value: 1
+  #       - value: 0

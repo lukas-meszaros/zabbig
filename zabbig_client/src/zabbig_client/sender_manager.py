@@ -41,15 +41,22 @@ class SenderManager:
         self._ItemValue = ItemValue
 
     async def send_batch(self, results: List[MetricResult], summary: RunSummary) -> None:
-        """Send all batch-mode results in one call (chunked by batch_send_max_size)."""
+        """Send all batch-mode results, splitting into chunks sent in parallel."""
         if not results:
             return
         max_size = self.config.batching.batch_send_max_size
         chunks = [results[i:i + max_size] for i in range(0, len(results), max_size)]
-        for chunk in chunks:
-            sent = await self._send(chunk, label="batch")
-            summary.sent_batch += sent[0]
-            summary.sender_failures += sent[1]
+        if len(chunks) == 1:
+            sent, failed = await self._send(chunks[0], label="batch")
+            summary.sent_batch += sent
+            summary.sender_failures += failed
+        else:
+            chunk_results = await asyncio.gather(
+                *[self._send(chunk, label=f"batch-chunk-{i+1}/{len(chunks)}") for i, chunk in enumerate(chunks)]
+            )
+            for sent, failed in chunk_results:
+                summary.sent_batch += sent
+                summary.sender_failures += failed
 
     async def send_immediate(self, results: List[MetricResult], summary: RunSummary) -> None:
         """Send immediate-mode results; each failure is isolated."""
@@ -135,7 +142,7 @@ class SenderManager:
                 sender = self._Sender(
                     server=host,
                     port=port,
-                    chunk_size=1,
+                    chunk_size=self.config.batching.batch_chunk_size,
                 )
                 response = sender.send(items)
             except Exception as exc:

@@ -31,6 +31,8 @@ python3 /path/to/zabbig_client/run.py
 | `--dry-run` | off | Collect all metrics but do not connect to or send anything to Zabbix. Useful for testing new metric definitions. |
 | `--log-level LEVEL` | from `client.yaml` | Override `logging.level`. Choices: `DEBUG` `INFO` `WARNING` `ERROR`. |
 | `--validate` | off | Check `metrics.yaml` for structural and value errors without running any collectors or connecting to Zabbix. Does **not** require `--config`. |
+| `--output PATH` | off | Write all collected values to a file after collection. Format controlled by `--output-format`. |
+| `--output-format` | `json` | Format for `--output`. Choices: `json` \| `csv` \| `table`. |
 
 ### `--config`
 
@@ -86,6 +88,27 @@ Issues found (1):
   [1] Metric 'bad_metric': time_window_from='2599' has invalid minutes (99)
 
 Validation complete: 3 metric(s) parsed, 1 issue(s) found.
+```
+
+### `--output` / `--output-format`
+
+Dump all collected metric values to a file after the run completes. Only _sendable_ results (`status=ok` or `status=fallback`) are written.
+
+```bash
+# Default JSON format
+python3 run.py --output /tmp/metrics.json
+
+# CSV (for spreadsheets / awk)
+python3 run.py --output /tmp/metrics.csv --output-format csv
+
+# Human-readable table (for quick inspection)
+python3 run.py --dry-run --output /tmp/metrics.txt --output-format table
+```
+
+Combine with `--dry-run` for a fast inventory of what the client would send:
+
+```bash
+python3 run.py --dry-run --output /tmp/preview.json
 ```
 
 ---

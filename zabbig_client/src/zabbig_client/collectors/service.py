@@ -24,6 +24,12 @@ from ..collector_registry import register_collector
 from ..models import MetricDef, MetricResult, RESULT_OK
 from .base import BaseCollector
 
+# Module-level cache for /proc cmdline entries.
+# Key: proc_root path, Value: list of decoded cmdline strings.
+# Populated on the first scan of a given proc_root within a single process run;
+# reused for all subsequent service-collector calls in the same run.
+_proc_cmdlines_cache: dict[str, list[str]] = {}
+
 
 @register_collector("service")
 class ServiceCollector(BaseCollector):
@@ -90,25 +96,35 @@ def _process_check(pattern: str, proc_root: str) -> int:
     Scan {proc_root}/*/cmdline for any process matching the regex pattern.
     Returns 1 if at least one match found, 0 otherwise.
     Only works on Linux (/proc filesystem) or a mounted proc from another host.
+
+    Cmdline entries are cached per proc_root after the first scan so that
+    multiple service metrics sharing the same proc_root never re-read /proc
+    within the same process run.
     """
     compiled = re.compile(pattern)
-    try:
-        proc_entries = os.scandir(proc_root)
-    except PermissionError as exc:
-        raise RuntimeError(f"Cannot scan {proc_root}: {exc}") from exc
 
-    with proc_entries as scanner:
-        for entry in scanner:
-            if not entry.name.isdigit():
-                continue
-            cmdline_path = f"{proc_root}/{entry.name}/cmdline"
-            try:
-                with open(cmdline_path, "rb") as fh:
-                    # cmdline args separated by NUL bytes
-                    cmdline = fh.read().replace(b"\x00", b" ").decode("utf-8", errors="replace")
-                if compiled.search(cmdline):
-                    return 1
-            except (PermissionError, FileNotFoundError, ProcessLookupError):
-                continue
+    if proc_root not in _proc_cmdlines_cache:
+        cmdlines: list[str] = []
+        try:
+            proc_entries = os.scandir(proc_root)
+        except PermissionError as exc:
+            raise RuntimeError(f"Cannot scan {proc_root}: {exc}") from exc
+
+        with proc_entries as scanner:
+            for entry in scanner:
+                if not entry.name.isdigit():
+                    continue
+                cmdline_path = f"{proc_root}/{entry.name}/cmdline"
+                try:
+                    with open(cmdline_path, "rb") as fh:
+                        cmdline = fh.read().replace(b"\x00", b" ").decode("utf-8", errors="replace")
+                    cmdlines.append(cmdline)
+                except (PermissionError, FileNotFoundError, ProcessLookupError):
+                    continue
+        _proc_cmdlines_cache[proc_root] = cmdlines
+
+    for cmdline in _proc_cmdlines_cache[proc_root]:
+        if compiled.search(cmdline):
+            return 1
 
     return 0

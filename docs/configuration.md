@@ -154,11 +154,20 @@ batching:
 
 #### `batch_send_max_size`
 
-Maximum metric values per Zabbix trapper call. If more metrics are ready, they are split into multiple sequential calls.
+Maximum metric values per Zabbix trapper call. If more metrics are ready, they are split into multiple chunks and sent in parallel (see `batch_chunk_size`).
 
 ```yaml
 batching:
   batch_send_max_size: 250    # default
+```
+
+#### `batch_chunk_size`
+
+The Zabbix sender `chunk_size` parameter — controls how many `ItemValue` objects are packed into each individual trapper packet within a single send call. Increase if your Zabbix server accepts larger payloads; decrease if you see protocol errors.
+
+```yaml
+batching:
+  batch_chunk_size: 250    # default
 ```
 
 #### `flush_immediate_separately`

@@ -43,7 +43,7 @@ from conftest import make_metric, make_result
 
 class TestConstants:
     def test_valid_collectors_contains_all(self):
-        assert VALID_COLLECTORS == {"cpu", "memory", "disk", "service", "network", "log", "probe"}
+        assert VALID_COLLECTORS == {"cpu", "memory", "disk", "service", "network", "log", "probe", "database"}
 
     def test_valid_delivery(self):
         assert VALID_DELIVERY == {"batch", "immediate"}

@@ -85,6 +85,22 @@ def _parse_args() -> argparse.Namespace:
             "Exit 0 = valid, 1 = issues found, 2 = file unreadable."
         ),
     )
+    parser.add_argument(
+        "--output",
+        default=None,
+        metavar="PATH",
+        help=(
+            "Write collected metric values to PATH after collection. "
+            "Format is controlled by --output-format (default: json)."
+        ),
+    )
+    parser.add_argument(
+        "--output-format",
+        default="json",
+        choices=["json", "csv", "table"],
+        metavar="FORMAT",
+        help="Output format when --output is specified: json | csv | table (default: json)",
+    )
     return parser.parse_args()
 
 
@@ -100,5 +116,7 @@ if __name__ == "__main__":
         databases_config_path=args.databases,
         dry_run=args.dry_run,
         log_level_override=args.log_level,
+        output_path=args.output,
+        output_format=args.output_format,
     )
     sys.exit(exit_code)

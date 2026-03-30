@@ -7,6 +7,7 @@ When strict_config_validation=False, validation errors are logged as warnings.
 """
 from __future__ import annotations
 
+import glob
 import logging
 import os
 import socket
@@ -87,6 +88,7 @@ def load_client_config(path: str) -> ClientConfig:
     cfg.batching = BatchingConfig(
         batch_collection_window_seconds=float(b.get("batch_collection_window_seconds", 60.0)),
         batch_send_max_size=int(b.get("batch_send_max_size", 250)),
+        batch_chunk_size=int(b.get("batch_chunk_size", 250)),
         flush_immediate_separately=bool(b.get("flush_immediate_separately", True)),
         immediate_micro_batch_window_ms=int(b.get("immediate_micro_batch_window_ms", 200)),
     )
@@ -153,17 +155,92 @@ def load_metrics_config(path: str, strict: bool = True) -> MetricsConfig:
 
         metrics.append(m)
 
+    # --- include: glob expansion ---
+    include_patterns = raw.get("include", [])
+    if not isinstance(include_patterns, list):
+        _config_error("metrics.yaml 'include' must be a list of glob patterns", strict)
+        include_patterns = []
+
+    if include_patterns:
+        base_dir = os.path.dirname(os.path.abspath(path))
+        for pattern in include_patterns:
+            if not isinstance(pattern, str):
+                _config_error(f"metrics.yaml include pattern must be a string, got {type(pattern).__name__!r}", strict)
+                continue
+            resolved = pattern if os.path.isabs(pattern) else os.path.join(base_dir, pattern)
+            matched = sorted(glob.glob(resolved))
+            if not matched:
+                log.warning("metrics.yaml include: no files matched pattern '%s'", pattern)
+                continue
+            for inc_path in matched:
+                _load_included_metrics(
+                    inc_path, defaults, collector_defaults,
+                    seen_ids, seen_keys, metrics, strict,
+                )
+
     return MetricsConfig(
         version=int(raw.get("version", 1)),
         defaults=defaults,
         collector_defaults=collector_defs_raw,
         metrics=metrics,
+        include=include_patterns,
     )
 
 
 # ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
+
+def _load_included_metrics(
+    path: str,
+    global_defaults: dict,
+    global_collector_defaults: dict[str, CollectorDefaults],
+    seen_ids: set[str],
+    seen_keys: set[str],
+    metrics: list,
+    strict: bool,
+) -> None:
+    """
+    Load and merge metrics from an included file.
+
+    Included files support:
+      - metrics:          List of metric entries (required)
+      - defaults:         Scoped defaults that apply only within this file
+
+    Unsupported in included files (silently ignored):
+      - collector_defaults (global only)
+      - include            (no recursive includes)
+    """
+    try:
+        raw = _read_yaml(path)
+    except (FileNotFoundError, ConfigError) as exc:
+        _config_error(f"Cannot load included metrics file '{path}': {exc}", strict)
+        return
+
+    # Local defaults: file-scoped, fallback to global defaults
+    local_defaults = {**global_defaults, **raw.get("defaults", {})}
+
+    for raw_metric in raw.get("metrics", []):
+        m = _parse_metric(raw_metric, local_defaults, global_collector_defaults, strict)
+        if m is None:
+            continue
+
+        if m.id in seen_ids:
+            _config_error(
+                f"Duplicate metric id: '{m.id}' (from included file '{path}')", strict
+            )
+            continue
+        seen_ids.add(m.id)
+
+        if m.key in seen_keys:
+            _config_error(
+                f"Duplicate Zabbix key: '{m.key}' (metric id={m.id}, from '{path}')", strict
+            )
+            continue
+        seen_keys.add(m.key)
+
+        metrics.append(m)
+
 
 def _read_yaml(path: str) -> dict:
     if not os.path.isfile(path):
@@ -273,6 +350,8 @@ def _parse_metric(
     max_executions_per_day = _parse_int_nonneg_field(raw, metric_id, "max_executions_per_day", strict)
     run_frequency = _parse_run_frequency_field(raw, metric_id, strict)
 
+    cache_seconds = _parse_int_nonneg_field(raw, metric_id, "cache_seconds", strict)
+
     tags = list(get("tags", []))
     params = dict(raw.get("params", {}))
 
@@ -293,6 +372,7 @@ def _parse_metric(
         unit=str(raw.get("unit", "")),
         importance=importance,
         fallback_value=fallback_value,
+        cache_seconds=cache_seconds,
         tags=tags,
         params=params,
         host_name=host_name,

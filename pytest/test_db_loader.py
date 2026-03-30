@@ -182,9 +182,12 @@ class TestEncryptedPasswords:
                 "password": "ENC:sometoken",
             }],
         })
-        with pytest.raises(DatabaseConfigError, match="no decryption key"):
-            # No secret.key in tmp_path — use monkeypatch to ensure no key file exists
-            load_databases_config(path, strict=True, strict_passwords=True)
+        # Patch _try_load_key to return None so the real secret.key file on disk
+        # does not interfere with this test.
+        from unittest.mock import patch
+        with patch("zabbig_client.db_loader._try_load_key", return_value=None):
+            with pytest.raises(DatabaseConfigError, match="no decryption key"):
+                load_databases_config(path, strict=True, strict_passwords=True)
 
 
 # ---------------------------------------------------------------------------

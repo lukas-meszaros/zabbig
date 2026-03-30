@@ -97,6 +97,8 @@ def run(
     databases_config_path: str | None = None,
     dry_run: bool = False,
     log_level_override: str | None = None,
+    output_path: str | None = None,
+    output_format: str = "json",
 ) -> int:
     """
     Run the full collection-and-send cycle.
@@ -174,10 +176,13 @@ def run(
 
     # Inject _db_registry into params for all database-type metrics so the
     # collector can look up connection details at run time.
+    # Also inject a shared mutable _db_conn_cache dict so connections are
+    # reused across multiple database metrics in the same run.
     if db_registry:
         import dataclasses as _dc
+        db_conn_cache: dict = {}
         enabled_metrics = [
-            _dc.replace(m, params={**m.params, "_db_registry": db_registry})
+            _dc.replace(m, params={**m.params, "_db_registry": db_registry, "_db_conn_cache": db_conn_cache})
             if m.collector == "database"
             else m
             for m in enabled_metrics
@@ -243,7 +248,7 @@ def run(
                 return 0
 
             exit_code = asyncio.run(
-                _run_with_timeout(client_config, scheduled_metrics, summary)
+                _run_with_timeout(client_config, scheduled_metrics, summary, output_path, output_format)
             )
 
             # Update per-metric execution counts (skip in dry-run so state
@@ -298,11 +303,13 @@ async def _run_with_timeout(
     config: ClientConfig,
     metrics: List[MetricDef],
     summary: RunSummary,
+    output_path: str | None = None,
+    output_format: str = "json",
 ) -> int:
     """Wrapper that enforces overall_timeout_seconds over the entire async run."""
     try:
         return await asyncio.wait_for(
-            _run_async(config, metrics, summary),
+            _run_async(config, metrics, summary, output_path, output_format),
             timeout=config.runtime.overall_timeout_seconds,
         )
     except asyncio.TimeoutError:
@@ -318,6 +325,8 @@ async def _run_async(
     config: ClientConfig,
     metrics: List[MetricDef],
     summary: RunSummary,
+    output_path: str | None = None,
+    output_format: str = "json",
 ) -> int:
     t_start = time.monotonic()
     exit_code = 0
@@ -351,16 +360,34 @@ async def _run_async(
         for r in overrides:
             log.info("  key=%-40s  host=%s", r.key, r.host_name)
 
+    # --- Write output file if requested ---
+    if output_path:
+        all_results = immediate_raw + batch_raw
+        _write_output(all_results, output_path, output_format)
+
+    # --- Close cached DB connections now that all collectors have finished ---
+    _close_db_conn_caches(metrics)
+
     # --- Send ---
     sender = SenderManager(config)
 
     if config.batching.flush_immediate_separately and immediate_to_send_only:
         log.info("Sending %d immediate metric(s) ...", len(immediate_to_send_only))
-        await sender.send_immediate(immediate_to_send_only, summary)
 
-    if batch_to_send_only:
-        log.info("Sending %d batch metric(s) ...", len(batch_to_send_only))
-        await sender.send_batch(batch_to_send_only, summary)
+    if config.batching.flush_immediate_separately and immediate_to_send_only and batch_to_send_only:
+        # Both queues have data — send them in parallel
+        log.info("Sending %d batch metric(s) in parallel with immediate ...", len(batch_to_send_only))
+        await asyncio.gather(
+            sender.send_immediate(immediate_to_send_only, summary),
+            sender.send_batch(batch_to_send_only, summary),
+        )
+    else:
+        if config.batching.flush_immediate_separately and immediate_to_send_only:
+            await sender.send_immediate(immediate_to_send_only, summary)
+
+        if batch_to_send_only:
+            log.info("Sending %d batch metric(s) ...", len(batch_to_send_only))
+            await sender.send_batch(batch_to_send_only, summary)
 
     # If flush_immediate_separately=false, immediate metrics are included in batch send
     if not config.batching.flush_immediate_separately and immediate_to_send_only:
@@ -386,6 +413,78 @@ async def _run_async(
         exit_code = 1
 
     return exit_code
+
+
+# ---------------------------------------------------------------------------
+# Output helpers
+# ---------------------------------------------------------------------------
+
+def _write_output(results: List, path: str, fmt: str) -> None:
+    """Write collected MetricResult objects to a file in the requested format."""
+    import csv as _csv
+    import dataclasses as _dc
+    import io
+    import json as _json
+
+    sendable = [r for r in results if r.is_sendable]
+
+    try:
+        if fmt == "json":
+            rows = [_dc.asdict(r) for r in sendable]
+            with open(path, "w", encoding="utf-8") as fh:
+                _json.dump(rows, fh, indent=2)
+        elif fmt == "csv":
+            if not sendable:
+                with open(path, "w", encoding="utf-8") as fh:
+                    fh.write("")
+                return
+            fields = list(_dc.fields(sendable[0]))
+            with open(path, "w", encoding="utf-8", newline="") as fh:
+                writer = _csv.DictWriter(fh, fieldnames=[f.name for f in fields])
+                writer.writeheader()
+                for r in sendable:
+                    writer.writerow(_dc.asdict(r))
+        elif fmt == "table":
+            if not sendable:
+                with open(path, "w", encoding="utf-8") as fh:
+                    fh.write("(no results)\n")
+                return
+            col_key = max(len(r.key) for r in sendable)
+            col_val = max(len(str(r.value)) for r in sendable)
+            col_sta = max(len(r.status) for r in sendable)
+            header = f"{'key':<{col_key}}  {'value':<{col_val}}  {'status':<{col_sta}}  collector"
+            sep = "-" * len(header)
+            buf = io.StringIO()
+            buf.write(header + "\n")
+            buf.write(sep + "\n")
+            for r in sendable:
+                buf.write(
+                    f"{r.key:<{col_key}}  {str(r.value):<{col_val}}  "
+                    f"{r.status:<{col_sta}}  {r.collector}\n"
+                )
+            with open(path, "w", encoding="utf-8") as fh:
+                fh.write(buf.getvalue())
+        log.info("Output written to '%s' (format=%s, %d metrics)", path, fmt, len(sendable))
+    except OSError as exc:
+        log.error("Could not write output to '%s': %s", path, exc)
+
+
+def _close_db_conn_caches(metrics: List) -> None:
+    """Close all cached database connections injected via _db_conn_cache."""
+    seen_caches: set[int] = set()
+    for m in metrics:
+        if m.collector != "database":
+            continue
+        cache = m.params.get("_db_conn_cache")
+        if cache is None or id(cache) in seen_caches:
+            continue
+        seen_caches.add(id(cache))
+        for db_name, conn in list(cache.items()):
+            try:
+                conn.close()
+            except Exception:
+                pass
+        cache.clear()
 
 
 # ---------------------------------------------------------------------------
