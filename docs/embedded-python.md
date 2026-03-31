@@ -100,13 +100,16 @@ All vendored dependencies (`requests`, `urllib3`, `PyYAML`, etc.) in `src/` are 
 
 ## Step 5 — Create a Wrapper Script (Recommended)
 
-Rather than typing the full path every time, create a small shell wrapper:
+Rather than typing the full path every time, create a small shell wrapper.
+The wrapper below also includes startup optimisations — see [configuration-performance.md](configuration-performance.md) for details.
 
 ```bash
 cat > start.sh << 'EOF'
 #!/bin/bash
+set -euo pipefail
 DIR="$(cd "$(dirname "$0")" && pwd)"
-exec "$DIR/python/bin/python3" "$DIR/run.py" "$@"
+export PYTHONPATH="$DIR/src${PYTHONPATH:+:$PYTHONPATH}"
+exec "$DIR/python/bin/python3" -s -O "$DIR/run.py" "$@"
 EOF
 chmod +x start.sh
 ```

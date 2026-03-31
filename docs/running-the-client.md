@@ -151,15 +151,24 @@ The most common deployment is a cron job that fires every 1–5 minutes. `run.py
 
 A small wrapper script lets you invoke the client without specifying the Python path or the location of `run.py` each time. It is also the recommended pattern when using an embedded (standalone) Python.
 
+The wrapper below includes three startup optimisations (see [configuration-performance.md](configuration-performance.md) for details):
+
 ```bash
 cat > start.sh << 'EOF'
 #!/bin/bash
 set -euo pipefail
 DIR="$(cd "$(dirname "$0")" && pwd)"
-exec "$DIR/python/bin/python3" "$DIR/run.py" "$@"
+export PYTHONPATH="$DIR/src${PYTHONPATH:+:$PYTHONPATH}"
+exec "$DIR/python/bin/python3" -s -O "$DIR/run.py" "$@"
 EOF
 chmod +x start.sh
 ```
+
+| Flag | Effect |
+|---|---|
+| `-s` | Skip user site-packages scan — saves a filesystem stat on every run |
+| `-O` | Remove `assert` statements, set `__debug__ = False` — small memory and parse saving |
+| `PYTHONPATH` | Pre-set so the `sys.path.insert` in `run.py` becomes a no-op |
 
 `$@` forwards all arguments, so every `run.py` option works unchanged:
 
@@ -177,7 +186,8 @@ cat > start.sh << 'EOF'
 #!/bin/bash
 set -euo pipefail
 DIR="$(cd "$(dirname "$0")" && pwd)"
-exec python3 "$DIR/run.py" "$@"
+export PYTHONPATH="$DIR/src${PYTHONPATH:+:$PYTHONPATH}"
+exec python3 -s -O "$DIR/run.py" "$@"
 EOF
 chmod +x start.sh
 ```
