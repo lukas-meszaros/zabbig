@@ -4,10 +4,15 @@ test_collector_registry.py — Tests for collector_registry.py.
 import pytest
 
 from zabbig_client.collector_registry import (
+    _ensure_collectors_imported,
     get_collector,
+    load_collectors_for,
     register_collector,
     registered_names,
 )
+
+# Populate the full registry once for the whole test module.
+_ensure_collectors_imported()
 
 
 class TestRegistry:
@@ -77,3 +82,27 @@ class TestRegistry:
         cls = get_collector(name)
         assert hasattr(cls, "collect")
         assert inspect.iscoroutinefunction(cls.collect)
+
+
+class TestLoadCollectorsFor:
+    def test_known_name_registers_collector(self):
+        from zabbig_client.collector_registry import _REGISTRY
+        # "cpu" must be in the registry after load_collectors_for
+        load_collectors_for({"cpu"})
+        assert "cpu" in _REGISTRY
+
+    def test_multiple_names(self):
+        from zabbig_client.collector_registry import _REGISTRY
+        load_collectors_for({"memory", "disk"})
+        assert "memory" in _REGISTRY
+        assert "disk" in _REGISTRY
+
+    def test_unknown_name_does_not_raise(self):
+        # Should warn and continue, not raise
+        load_collectors_for({"totally_unknown_collector_xyz"})
+
+    def test_idempotent_double_call(self):
+        # Calling twice for the same name should not raise or duplicate
+        load_collectors_for({"cpu"})
+        load_collectors_for({"cpu"})
+        assert registered_names().count("cpu") == 1

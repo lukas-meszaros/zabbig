@@ -23,6 +23,7 @@ import sys
 import time
 from typing import List
 
+from .collector_registry import load_collectors_for
 from .config_loader import ConfigError, load_client_config, load_metrics_config, validate_metrics_file
 from .db_loader import DatabaseConfigError, load_databases_config
 from .locking import LockError, RunLock
@@ -246,6 +247,11 @@ def run(
                 save_state(client_config, summary)
                 _log_summary(summary)
                 return 0
+
+            # Import only the collector modules that are actually needed for
+            # this run.  Heavy dependencies (requests, pg8000, ssl) are only
+            # pulled in when a metric that requires them is scheduled.
+            load_collectors_for({m.collector for m in scheduled_metrics})
 
             exit_code = asyncio.run(
                 _run_with_timeout(client_config, scheduled_metrics, summary, output_path, output_format)

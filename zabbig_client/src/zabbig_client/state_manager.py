@@ -50,9 +50,11 @@ def save_state(config: ClientConfig, summary: RunSummary) -> None:
         "consecutive_failures": consecutive_failures,
     }
 
+    tmp_path = state_path + ".tmp"
     try:
-        with open(state_path, "w", encoding="utf-8") as fh:
+        with open(tmp_path, "w", encoding="utf-8") as fh:
             json.dump(state, fh, indent=2)
+        os.replace(tmp_path, state_path)
         log.debug("State saved to %s", state_path)
     except OSError as exc:
         log.warning("Could not save state to %s: %s", state_path, exc)
@@ -100,9 +102,11 @@ def save_schedule_state(config: ClientConfig, state: dict) -> None:
     state_dir = config.state.directory
     os.makedirs(state_dir, exist_ok=True)
     state_path = os.path.join(state_dir, SCHEDULE_FILE)
+    tmp_path = state_path + ".tmp"
     try:
-        with open(state_path, "w", encoding="utf-8") as fh:
+        with open(tmp_path, "w", encoding="utf-8") as fh:
             json.dump(state, fh, indent=2)
+        os.replace(tmp_path, state_path)
         log.debug("Schedule state saved to %s", state_path)
     except OSError as exc:
         log.warning("Could not save schedule state to %s: %s", state_path, exc)

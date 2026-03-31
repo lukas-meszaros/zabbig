@@ -204,15 +204,21 @@ Open `src/zabbig_client/models.py` and add the new name to `VALID_COLLECTORS`:
 VALID_COLLECTORS = {"cpu", "memory", "disk", "service", "network", "log", "probe", "my_collector"}
 ```
 
-### 3. Import the module in `collector_registry.py`
+### 3. Register the collector name in `collector_registry.py`
 
-Open `src/zabbig_client/collector_registry.py` and add the import inside `_ensure_collectors_imported()`:
+Open `src/zabbig_client/collector_registry.py` and add an entry to `_COLLECTOR_MODULE_MAP`:
 
 ```python
-def _ensure_collectors_imported() -> None:
-    from .collectors import cpu, memory, disk, service, network, log
-    from .collectors import my_collector  # add this line
+_COLLECTOR_MODULE_MAP: dict[str, str] = {
+    "cpu":         "cpu",
+    ...
+    "my_collector": "my_collector",   # add this line
+}
 ```
+
+That is all. The runtime imports the module on demand — only when a metric using this collector is actually scheduled. The module does not need to be imported anywhere else.
+
+> **Note:** `_ensure_collectors_imported()` still exists for tests and tooling that need the full registry pre-populated. Any new collector registered in `_COLLECTOR_MODULE_MAP` is automatically included; no changes to that function are required.
 
 ### 4. Use the collector in `metrics.yaml`
 
