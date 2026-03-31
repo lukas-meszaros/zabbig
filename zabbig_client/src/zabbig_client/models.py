@@ -127,7 +127,6 @@ class MetricDef:
     tags: list = field(default_factory=list)
     params: dict = field(default_factory=dict)
     host_name: Optional[str] = None
-    cache_seconds: Optional[int] = None             # skip collection if a cached value is still fresh
     # --- Schedule constraints (all optional; None / 0 = no restriction) ---
     time_window_from: Optional[str] = None          # "HHMM" — active from this time until midnight
     time_window_till: Optional[str] = None          # "HHMM" — active from midnight until this time

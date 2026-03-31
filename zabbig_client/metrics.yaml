@@ -454,20 +454,6 @@
 #                          params if needed.
 #
 # =============================================================================
-# CACHE_SECONDS  (optional — per metric)
-# =============================================================================
-#   cache_seconds  integer  >= 0
-#                           When set on a metric, the collector skips collection
-#                           and re-uses the most recently known value if the
-#                           previous collection finished less than cache_seconds
-#                           seconds ago.
-#                           0 or absent = always collect (no caching).
-#                           Useful for expensive or slow collectors (e.g.
-#                           database queries, inodes_total) that do not need
-#                           per-run freshness.
-#                           Example: cache_seconds: 300  # only re-collect every 5 minutes
-#
-# =============================================================================
 # INCLUDE DIRECTIVE  (optional — top level)
 # =============================================================================
 #   include  list of glob patterns
@@ -735,7 +721,6 @@ metrics:
     delivery: batch
     timeout_seconds: 10
     error_policy: skip
-    cache_seconds: 300    # inode totals rarely change; skip re-collection for 5 minutes
     params:
       mount: "/"
       mode: inodes_total

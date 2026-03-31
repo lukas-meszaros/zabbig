@@ -208,7 +208,6 @@ Collector-specific parameters. See the individual collector documents for the fu
 | `value_type` | string | — | `float` \| `int` \| `string`. Informational only. |
 | `unit` | string | — | Informational unit label (e.g. `%`, `B`, `ms`). Not sent to Zabbix. |
 | `host_name` | string | — | Send this metric under a different Zabbix host name. |
-| `cache_seconds` | int | — | Re-use last known value if still fresh; see [Scheduling fields](#scheduling-fields). |
 
 All of these can be set in the top-level `defaults` block or under `collector_defaults.<name>` to apply them to multiple metrics at once.
 
@@ -381,40 +380,9 @@ run_frequency: "even"   # even-numbered invocations only
 
 The run counter resets at the start of each new calendar day (stored in `state/schedule.json`).
 
-### `cache_seconds`
-
-Type: integer ≥ 0 (absent or `0` = no caching — always collect)
-
-Skip collection and re-use the most recently known value if it is still fresh. The clock is wall-time since the previous successful collection. Requires `state.enabled: true` in `client.yaml`.
-
-Useful for:
-- Expensive database queries or large log scans
-- Metrics that change on the scale of minutes or hours (inode totals, system uptime)
-- Reducing load on external systems polled faster than they need to be
-
-```yaml
-- id: disk_root_inodes_total
-  collector: disk
-  key: host.disk.root.inodes_total
-  cache_seconds: 300          # only re-collect every 5 minutes
-  params:
-    mount: "/"
-    mode: inodes_total
-
-- id: db_active_connections
-  collector: database
-  key: pg.connections.active
-  cache_seconds: 60           # refresh at most once per minute
-  params:
-    database: prod_pg
-    sql: "SELECT count(*) FROM pg_stat_activity WHERE state = 'active'"
-```
-
-> When state is disabled or no previous value has been recorded yet, the metric always collects normally regardless of `cache_seconds`.
-
 ### Constraint evaluation order
 
-Constraints are tested in this order: **time window → daily quota → run frequency → cache**. The first failing constraint skips the metric; the remaining constraints are not evaluated for that run.
+Constraints are tested in this order: **time window → daily quota → run frequency**. The first failing constraint skips the metric; the remaining constraints are not evaluated for that run.
 
 ### Full scheduling example
 

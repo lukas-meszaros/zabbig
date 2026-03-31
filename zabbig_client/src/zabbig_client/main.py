@@ -25,7 +25,6 @@ from typing import List
 
 from .collector_registry import load_collectors_for
 from .config_loader import ConfigError, load_client_config, load_metrics_config, validate_metrics_file
-from .db_loader import DatabaseConfigError, load_databases_config
 from .locking import LockError, RunLock
 from .logging_setup import setup_logging
 from .models import ClientConfig, MetricDef, MetricsConfig, RunSummary
@@ -150,6 +149,7 @@ def run(
     db_registry: dict = {}
     if databases_config_path and os.path.isfile(databases_config_path):
         try:
+            from .db_loader import DatabaseConfigError, load_databases_config  # noqa: PLC0415
             db_registry = load_databases_config(
                 databases_config_path,
                 strict=client_config.features.strict_config_validation,

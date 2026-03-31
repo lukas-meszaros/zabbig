@@ -371,8 +371,6 @@ def _parse_metric(
     max_executions_per_day = _parse_int_nonneg_field(raw, metric_id, "max_executions_per_day", strict)
     run_frequency = _parse_run_frequency_field(raw, metric_id, strict)
 
-    cache_seconds = _parse_int_nonneg_field(raw, metric_id, "cache_seconds", strict)
-
     tags = list(get("tags", []))
     params = dict(raw.get("params", {}))
 
@@ -393,7 +391,6 @@ def _parse_metric(
         unit=str(raw.get("unit", "")),
         importance=importance,
         fallback_value=fallback_value,
-        cache_seconds=cache_seconds,
         tags=tags,
         params=params,
         host_name=host_name,

@@ -22,7 +22,6 @@ No code changes are needed to add a metric for an existing collector. Edit `metr
   # time_window_till: "2200"        # optional: stop collecting at 22:00
   # max_executions_per_day: 10      # optional: cap daily execution count
   # run_frequency: 2                # optional: every 2nd invocation (or "even"/"odd")
-  # cache_seconds: 300              # optional: skip re-collection if value is < 5 min old
   params:
     mount: "/backup"
     mode: used_percent
@@ -83,7 +82,6 @@ metrics:
     collector: database
     key: pg.replication.lag_seconds
     value_type: float
-    cache_seconds: 30
     params:
       database: prod_pg
       sql: "SELECT EXTRACT(epoch FROM now() - pg_last_xact_replay_timestamp())"
