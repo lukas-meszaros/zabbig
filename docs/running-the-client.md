@@ -147,6 +147,47 @@ The most common deployment is a cron job that fires every 1–5 minutes. `run.py
 
 ---
 
+## Performance Tuning
+
+For cron-based deployments — especially where a hard process-kill limit applies — these are the most impactful settings. Full details in [configuration-performance.md](configuration-performance.md).
+
+### Python interpreter flags (`start.sh`)
+
+| Flag | Effect |
+|---|---|
+| `-s` | Skip user site-packages scan — saves a filesystem stat on every invocation |
+| `-O` | Strip `assert` statements and set `__debug__ = False` — small memory saving |
+| `PYTHONPATH` | Pre-set in the shell so the `sys.path.insert` in `run.py` is a no-op |
+
+These are already included in the `start.sh` wrapper shipped with the client (see [Creating a `start.sh` Wrapper](#creating-a-startsh-wrapper)).
+
+### `client.yaml` — key performance parameters
+
+| Parameter | Default | Recommendation |
+|---|---|---|
+| `runtime.overall_timeout_seconds` | `240` | Set to `(cron_interval − 10)` or `(admin_kill_limit − 10)`, whichever is smaller. Ensures a clean finish before any hard kill. |
+| `runtime.max_concurrency` | `8` | Reduce to `4` on constrained hosts; increase on hosts with many metrics and a strong CPU. |
+| `batching.batch_collection_window_seconds` | `60` | Must be ≤ `overall_timeout_seconds`. Set to at least the slowest collector's `timeout_seconds`. |
+| `zabbix.connect_timeout_seconds` | `10` | Reduce to `3–5` on a reliable LAN to fail fast if the Zabbix server is unreachable. |
+| `batching.flush_immediate_separately` | `true` | Set to `false` if none of your metrics use `delivery: immediate`, to save a second send call. |
+
+### `metrics.yaml` — reducing work per invocation
+
+| Field | Where | Effect |
+|---|---|---|
+| `enabled: false` | per metric | Metric is skipped entirely; its collector module is not imported. |
+| `run_frequency: N` | per metric | Collect only on every Nth cron invocation. `run_frequency: 3` on a 5-min cron = every 15 min. |
+| `max_executions_per_day: N` | per metric | Hard cap on daily collections regardless of how often cron fires. |
+| `time_window_from/till` | per metric | Restrict collection to a time-of-day window. |
+| `check_mode: process` | service metrics | Avoids a `subprocess` + `systemctl` fork; scans `/proc` instead. Faster and lighter. |
+| `delivery: batch` | per metric | Default. Use `immediate` only for genuinely time-sensitive checks; each `immediate` metric causes an extra send call. |
+
+### Lazy module loading (automatic)
+
+The client only imports the Python modules needed by collectors that are actually scheduled in a given run. If no database metrics are scheduled, `pg8000`, `pyaes`, and `db_loader` are never imported. If no probe metrics are scheduled, `requests` and the SSL context are never loaded. No configuration is required.
+
+---
+
 ## Creating a `start.sh` Wrapper
 
 A small wrapper script lets you invoke the client without specifying the Python path or the location of `run.py` each time. It is also the recommended pattern when using an embedded (standalone) Python.
