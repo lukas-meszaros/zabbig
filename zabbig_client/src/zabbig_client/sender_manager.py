@@ -2,9 +2,9 @@
 sender_manager.py — Wraps zabbix_utils.Sender for batch and immediate delivery.
 
 Key behaviours:
-- Uses chunk_size=1 when sending so response.details maps directly to items.
-  (chunk_size could be bumped to batch_send_max_size for large batches, but 1
-   gives exact per-item failure attribution at negligible cost for typical volumes.)
+- Uses chunk_size=1 when sending so response.details maps directly to items,
+  giving exact per-item failure attribution. Application-level batching is handled
+  by send_batch() splitting into batch_send_max_size chunks before calling _send().
 - Each send call has its own asyncio.to_thread dispatch, keeping the event loop free.
 - A single Sender instance is reused; the underlying TCP connection is opened per send.
 - In dry_run mode nothing is sent; a synthetic success response is returned.
@@ -142,7 +142,7 @@ class SenderManager:
                 sender = self._Sender(
                     server=host,
                     port=port,
-                    chunk_size=self.config.batching.batch_chunk_size,
+                    chunk_size=1,  # 1 item per Sender chunk → response.details maps directly to items
                 )
                 response = sender.send(items)
             except Exception as exc:
@@ -173,8 +173,9 @@ class SenderManager:
             if response.details:
                 for node, chunks in response.details.items():
                     for resp in chunks:
-                        item = results[resp.chunk - 1]
                         if resp.failed:
+                            # chunk_size=1 → resp.chunk is the 1-based index of the single item
+                            item = results[resp.chunk - 1]
                             effective_host = item.host_name or default_host_name
                             log.warning(
                                 "  REJECTED  key=%-40s  value=%s  host=%s%s  (node=%s)",
