@@ -145,35 +145,37 @@ def run(
         _send_fatal_failure(client_config)
         return 2
 
-    # --- Load databases config (optional) ---
-    db_registry: dict = {}
-    if databases_config_path and os.path.isfile(databases_config_path):
-        try:
-            from .db_loader import DatabaseConfigError, load_databases_config  # noqa: PLC0415
-            db_registry = load_databases_config(
-                databases_config_path,
-                strict=client_config.features.strict_config_validation,
-                strict_passwords=False,  # warn rather than abort on plain-text passwords
-            )
-            log.info("  databases: %s (%d entries)", databases_config_path, len(db_registry))
-        except (DatabaseConfigError, FileNotFoundError) as exc:
-            log.error(
-                "Cannot load databases config '%s': %s", databases_config_path, exc
-            )
-            _send_fatal_failure(client_config)
-            return 2
-    elif databases_config_path:
-        log.warning(
-            "databases config path '%s' specified but file not found — "
-            "database metrics will fail",
-            databases_config_path,
-        )
-
     # --- Filter enabled metrics ---
     all_metrics = metrics_config.metrics
     enabled_metrics: List[MetricDef] = [
         m for m in all_metrics if m.enabled
     ] if client_config.features.skip_disabled_metrics else all_metrics
+
+    # --- Load databases config (optional / only needed for database metrics) ---
+    needs_database_config = any(m.collector == "database" for m in enabled_metrics)
+    db_registry: dict = {}
+    if needs_database_config:
+        if databases_config_path and os.path.isfile(databases_config_path):
+            try:
+                from .db_loader import DatabaseConfigError, load_databases_config  # noqa: PLC0415
+                db_registry = load_databases_config(
+                    databases_config_path,
+                    strict=client_config.features.strict_config_validation,
+                    strict_passwords=False,  # warn rather than abort on plain-text passwords
+                )
+                log.info("  databases: %s (%d entries)", databases_config_path, len(db_registry))
+            except (DatabaseConfigError, FileNotFoundError) as exc:
+                log.error(
+                    "Cannot load databases config '%s': %s", databases_config_path, exc
+                )
+                _send_fatal_failure(client_config)
+                return 2
+        elif databases_config_path:
+            log.warning(
+                "databases config path '%s' specified but file not found — "
+                "database metrics will fail",
+                databases_config_path,
+            )
 
     # Inject _db_registry into params for all database-type metrics so the
     # collector can look up connection details at run time.
